@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 import secrets
 import string
+from html import unescape
+from html.parser import HTMLParser
 
 
 CODE_PATTERN = re.compile(r"\b(?:\d{4,8}|[A-Z0-9]{6,10})\b")
@@ -32,6 +34,34 @@ VERIFICATION_HINTS = (
 LINK_HINTS = ("verify", "confirm", "activate", "auth", "magic", "token", "reset", "password", "login")
 
 
+class HTMLTextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._parts: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag in {"script", "style"}:
+            self._skip_depth += 1
+        if tag in {"br", "p", "div", "li", "tr", "table", "section"}:
+            self._parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style"} and self._skip_depth:
+            self._skip_depth -= 1
+        if tag in {"p", "div", "li", "tr", "table", "section"}:
+            self._parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth:
+            return
+        if data.strip():
+            self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(part.strip() for part in self._parts if part.strip())
+
+
 def generate_local_part(length: int = 10) -> str:
     alphabet = string.ascii_lowercase + string.digits
     return "tmp-" + "".join(secrets.choice(alphabet) for _ in range(length))
@@ -54,6 +84,15 @@ def extract_links(*parts: str) -> list[str]:
             if cleaned not in seen:
                 seen.append(cleaned)
     return seen[:20]
+
+
+def html_to_text(html: str) -> str:
+    if not html:
+        return ""
+    parser = HTMLTextExtractor()
+    parser.feed(unescape(html))
+    parser.close()
+    return summarize_text(parser.get_text(), limit=4000)
 
 
 def detect_message_kind(subject: str, text_body: str, html_body: str, codes: list[str], links: list[str]) -> str:
