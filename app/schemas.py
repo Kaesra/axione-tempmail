@@ -26,6 +26,8 @@ class InboxSummary(BaseModel):
     is_persistent: bool
     created_at: datetime
     message_count: int
+    unread_count: int
+    verification_count: int
     latest_message_at: datetime | None = None
     latest_subject: str = ""
 
@@ -34,15 +36,24 @@ class MessagePreview(BaseModel):
     id: int
     inbox_address: str
     mail_from: str
+    sender_domain: str
     subject: str
     received_at: datetime
     codes: list[str]
+    message_kind: str
+    verification_link: str
+    is_unread: bool
+    summary: str
 
 
 class MessageDetail(MessagePreview):
     text_body: str
     html_body: str
     raw_headers: str
+
+
+class MessageUpdate(BaseModel):
+    is_unread: bool
 
 
 class ConfigResponse(BaseModel):
