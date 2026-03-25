@@ -60,6 +60,17 @@ def user_response_payload(user) -> UserResponse:
     )
 
 
+def template_user_payload(user: dict | None) -> dict | None:
+    if user is None:
+        return None
+    payload = dict(user)
+    for key in ("created_at", "approved_at"):
+        value = payload.get(key)
+        if value is not None:
+            payload[key] = value.isoformat()
+    return payload
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -86,7 +97,7 @@ async def index(request: Request):
             "accepted_domains": settings.accepted_domains,
             "allow_any_domain": settings.allow_any_domain,
             "poll_seconds": settings.poll_seconds,
-            "current_user": current_user,
+            "current_user": template_user_payload(current_user),
             "admin_username": settings.admin_username,
         },
     )
