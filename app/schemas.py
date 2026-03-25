@@ -113,6 +113,8 @@ class ConfigResponse(BaseModel):
     allow_any_domain: bool
     poll_seconds: int
     message_ttl_hours: int
+    temp_inbox_minutes: int
+    temp_daily_limit: int
     max_messages_per_inbox: int
 
 
