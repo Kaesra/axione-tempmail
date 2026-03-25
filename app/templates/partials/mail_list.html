@@ -55,7 +55,7 @@
             <span class="font-medium" x-text="message.subject || 'Konu yok'"></span>
             <span class="mx-1 text-slate-400">-</span>
             <span class="text-slate-500" x-text="message.summary || 'Onizleme yok'"></span>
-            <span x-show="message.codes.length" class="mono ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700" x-text="message.codes[0]"></span>
+            <span x-show="Array.isArray(message.codes) && message.codes.length" class="mono ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700" x-text="Array.isArray(message.codes) ? message.codes[0] : ''"></span>
             <span x-show="message.message_category !== 'primary'" class="mono ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-sky-700" x-text="message.message_category"></span>
           </div>
           <div class="justify-self-end text-xs" :class="message.is_unread ? 'font-bold text-slate-700' : 'text-slate-500'" x-text="formatDate(message.received_at)"></div>

@@ -182,7 +182,8 @@ function mailDesk() {
 
     async refreshMessages() {
       if (!this.activeInbox || !this.auth.user) return
-      this.messages = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`)
+      const payload = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`)
+      this.messages = Array.isArray(payload) ? payload.map((item) => this.normalizeMessage(item)) : []
       await this.fetchInboxes()
       if (!this.messages.length) {
         this.selectedMessage = null
@@ -196,7 +197,7 @@ function mailDesk() {
     },
 
     async loadMessage(messageId) {
-      this.selectedMessageDetail = await this.api(`/api/messages/${messageId}`)
+      this.selectedMessageDetail = this.normalizeMessage(await this.api(`/api/messages/${messageId}`))
       this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail
       this.messageViewOpen = true
       if (this.selectedMessage) this.selectedMessage.is_unread = false
@@ -217,7 +218,7 @@ function mailDesk() {
 
     async toggleSelectedUnread() {
       if (!this.selectedMessage) return
-      const updated = await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'PATCH', body: JSON.stringify({ is_unread: !this.selectedMessage.is_unread }) })
+      const updated = this.normalizeMessage(await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'PATCH', body: JSON.stringify({ is_unread: !this.selectedMessage.is_unread }) }))
       const index = this.messages.findIndex((item) => item.id === updated.id)
       if (index >= 0) this.messages[index] = { ...this.messages[index], ...updated }
       this.selectedMessage = { ...(this.selectedMessage || {}), ...updated }
@@ -247,7 +248,7 @@ function mailDesk() {
       if (this.filter.mode === 'verification') items = items.filter((m) => ['verification', 'password_reset', 'login_link', 'code'].includes(m.message_kind))
       if (this.search.trim()) {
         const q = this.search.trim().toLowerCase()
-        items = items.filter((m) => [m.subject, m.mail_from, m.sender_domain, m.summary].join(' ').toLowerCase().includes(q))
+        items = items.filter((m) => [m.subject || '', m.mail_from || '', m.sender_domain || '', m.summary || ''].join(' ').toLowerCase().includes(q))
       }
       return items
     },
@@ -322,6 +323,23 @@ function mailDesk() {
         return JSON.stringify(value)
       }
       return String(value || 'Istek basarisiz')
+    },
+
+    normalizeMessage(value) {
+      const message = value && typeof value === 'object' ? { ...value } : {}
+      message.codes = Array.isArray(message.codes) ? message.codes.filter((item) => typeof item === 'string' && item.trim()) : []
+      message.mail_from = typeof message.mail_from === 'string' ? message.mail_from : ''
+      message.sender_domain = typeof message.sender_domain === 'string' ? message.sender_domain : ''
+      message.subject = typeof message.subject === 'string' ? message.subject : ''
+      message.summary = typeof message.summary === 'string' ? message.summary : ''
+      message.message_category = typeof message.message_category === 'string' ? message.message_category : 'primary'
+      message.message_kind = typeof message.message_kind === 'string' ? message.message_kind : 'general'
+      message.verification_link = typeof message.verification_link === 'string' ? message.verification_link : ''
+      message.text_body = typeof message.text_body === 'string' ? message.text_body : ''
+      message.html_body = typeof message.html_body === 'string' ? message.html_body : ''
+      message.raw_headers = typeof message.raw_headers === 'string' ? message.raw_headers : ''
+      message.is_unread = Boolean(message.is_unread)
+      return message
     },
 
     clearNotice() {
