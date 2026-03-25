@@ -9,7 +9,7 @@ from sqlalchemy import delete, desc, func, select
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Inbox, Message
-from app.utils import detect_message_kind, extract_codes, extract_links, pick_verification_link, summarize_text
+from app.utils import detect_message_kind, extract_codes, extract_links, html_to_text, pick_verification_link, summarize_text
 
 
 def normalize_address(address: str) -> str:
@@ -33,7 +33,7 @@ def _message_payload(message: Message) -> dict:
         "message_kind": message.message_kind,
         "verification_link": message.verification_link,
         "is_unread": message.is_unread,
-        "summary": summarize_text(message.text_body, message.html_body),
+        "summary": summarize_text(message.text_body),
     }
 
 
@@ -175,6 +175,11 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
                 html_body = payload
             else:
                 text_body = payload
+
+    if html_body:
+        html_as_text = html_to_text(html_body)
+        if len(html_as_text) > len(text_body):
+            text_body = html_as_text
 
     sender_domain = split_address(mail_from or "unknown@sender")[1]
     codes = extract_codes(subject, text_body, html_body)
