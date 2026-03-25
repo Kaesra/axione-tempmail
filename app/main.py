@@ -28,6 +28,7 @@ from app.mail_service import (
     counts,
     delete_inbox_messages,
     delete_message,
+    ensure_default_inboxes,
     ensure_inbox,
     get_message,
     is_domain_allowed,
@@ -160,7 +161,7 @@ async def healthz() -> HealthResponse:
 
 
 @app.post("/api/inboxes", response_model=InboxResponse)
-async def create_inbox(payload: InboxCreate, _: dict = Depends(require_user)) -> InboxResponse:
+async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user)) -> InboxResponse:
     domain = (payload.domain or (settings.accepted_domains[0] if settings.accepted_domains else "temp.local")).lower()
     if not is_domain_allowed(domain):
         raise HTTPException(status_code=400, detail="Domain is not allowed")
@@ -168,66 +169,81 @@ async def create_inbox(payload: InboxCreate, _: dict = Depends(require_user)) ->
     local_part = (payload.local_part or generate_local_part()).strip().lower()
     address = normalize_address(f"{local_part}@{domain}")
     try:
-        inbox = ensure_inbox(address)
+        inbox = ensure_inbox(
+            address,
+            owner_username=user["username"],
+            is_persistent=payload.is_persistent,
+            profile_name=payload.profile_name or f"{local_part}@{domain}",
+            profile_type="manual",
+        )
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     if payload.is_persistent and not inbox.is_persistent:
-        inbox = set_inbox_persistent(address, True) or inbox
-    return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+        inbox = set_inbox_persistent(address, user["username"], True) or inbox
+    return InboxResponse(
+        local_part=inbox.local_part,
+        domain=inbox.domain,
+        address=inbox.address,
+        profile_name=inbox.profile_name,
+        profile_type=inbox.profile_type,
+        is_persistent=inbox.is_persistent,
+        created_at=inbox.created_at,
+    )
 
 
 @app.get("/api/inboxes", response_model=list[InboxSummary])
-async def inbox_index(_: dict = Depends(require_user)) -> list[InboxSummary]:
-    return [InboxSummary(**item) for item in list_inboxes()]
+async def inbox_index(request: Request, user: dict = Depends(require_user)) -> list[InboxSummary]:
+    ensure_default_inboxes(user["username"], request.client.host if request.client else "unknown", settings.accepted_domains[0])
+    return [InboxSummary(**item) for item in list_inboxes(user["username"])]
 
 
 @app.get("/api/inboxes/{address:path}/messages", response_model=list[MessagePreview])
-async def inbox_messages(address: str, _: dict = Depends(require_user)) -> list[MessagePreview]:
-    return [MessagePreview(**item) for item in list_messages(address)]
+async def inbox_messages(address: str, user: dict = Depends(require_user)) -> list[MessagePreview]:
+    return [MessagePreview(**item) for item in list_messages(user["username"], address)]
 
 
 @app.get("/api/inboxes/{address:path}", response_model=InboxResponse)
-async def get_inbox(address: str, _: dict = Depends(require_user)) -> InboxResponse:
+async def get_inbox(address: str, user: dict = Depends(require_user)) -> InboxResponse:
     normalized = normalize_address(address)
     with SessionLocal() as session:
-        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
+        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == user["username"]))
         if inbox is None:
             raise HTTPException(status_code=404, detail="Inbox not found")
-        return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+        return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
 
 
 @app.patch("/api/inboxes/{address:path}", response_model=InboxResponse)
-async def update_inbox(address: str, payload: InboxUpdate, _: dict = Depends(require_user)) -> InboxResponse:
-    inbox = set_inbox_persistent(address, payload.is_persistent)
+async def update_inbox(address: str, payload: InboxUpdate, user: dict = Depends(require_user)) -> InboxResponse:
+    inbox = set_inbox_persistent(address, user["username"], payload.is_persistent)
     if inbox is None:
         raise HTTPException(status_code=404, detail="Inbox not found")
-    return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+    return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
 
 
 @app.get("/api/messages/{message_id}", response_model=MessageDetail)
-async def message_detail(message_id: int, _: dict = Depends(require_user)) -> MessageDetail:
-    message = get_message(message_id)
+async def message_detail(message_id: int, user: dict = Depends(require_user)) -> MessageDetail:
+    message = get_message(user["username"], message_id)
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return MessageDetail(**message)
 
 
 @app.delete("/api/inboxes/{address:path}/messages", response_model=DeleteResponse)
-async def purge_inbox(address: str, _: dict = Depends(require_user)) -> DeleteResponse:
-    return DeleteResponse(deleted=delete_inbox_messages(address))
+async def purge_inbox(address: str, user: dict = Depends(require_user)) -> DeleteResponse:
+    return DeleteResponse(deleted=delete_inbox_messages(user["username"], address))
 
 
 @app.delete("/api/messages/{message_id}", response_model=DeleteResponse)
-async def remove_message(message_id: int, _: dict = Depends(require_user)) -> DeleteResponse:
-    deleted = delete_message(message_id)
+async def remove_message(message_id: int, user: dict = Depends(require_user)) -> DeleteResponse:
+    deleted = delete_message(user["username"], message_id)
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Message not found")
     return DeleteResponse(deleted=deleted)
 
 
 @app.patch("/api/messages/{message_id}", response_model=MessagePreview)
-async def update_message(message_id: int, payload: MessageUpdate, _: dict = Depends(require_user)) -> MessagePreview:
-    message = set_message_unread(message_id, payload.is_unread)
+async def update_message(message_id: int, payload: MessageUpdate, user: dict = Depends(require_user)) -> MessagePreview:
+    message = set_message_unread(user["username"], message_id, payload.is_unread)
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return MessagePreview(**message)
