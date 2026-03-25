@@ -24,6 +24,26 @@ SMTP portu: `25`
 
 Not: Linux'ta `25` portu icin uygulamayi root ile calistirman veya `setcap` kullanman gerekir.
 
+## Tek komutla baslatma
+
+- Linux / Ubuntu: `bash start.sh`
+- Windows CMD: `start.bat`
+- Windows PowerShell: `powershell -ExecutionPolicy Bypass -File .\start.ps1`
+
+Bu scriptler sunlari otomatik yapar:
+
+- `.venv` olusturur
+- bagimliliklari kurar
+- `.env` yoksa olusturur
+- web portunu otomatik secer (`8080`, doluysa baska bos port)
+- SMTP portunu otomatik secer (`25`, uygun degilse `2525` ve devamindaki bos portlar)
+- uygulamayi baslatir
+
+Not:
+
+- Gercek dis mail almak icin SMTP'nin sonunda `25` portunda calismasi gerekir.
+- Otomatik secim test ve ilk kurulum icin kolaylik saglar; MX kaydi aktif kullanimda uygulama portuyla ayni olmali.
+
 ## Ornek SMTP testi
 
 ```bash
