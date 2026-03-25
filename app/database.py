@@ -24,6 +24,18 @@ def init_db() -> None:
     inbox_columns = {column["name"] for column in inspector.get_columns("inboxes")}
     message_columns = {column["name"] for column in inspector.get_columns("messages")}
     with engine.begin() as connection:
+        if "local_part" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN local_part VARCHAR(120) DEFAULT ''"))
+        if "domain" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN domain VARCHAR(255) DEFAULT ''"))
+        if "owner_username" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN owner_username VARCHAR(120) DEFAULT ''"))
+        if "profile_name" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN profile_name VARCHAR(120) DEFAULT 'Inbox'"))
+        if "profile_type" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN profile_type VARCHAR(50) DEFAULT 'manual'"))
+        if "source_ip" not in inbox_columns:
+            connection.execute(text("ALTER TABLE inboxes ADD COLUMN source_ip VARCHAR(120) DEFAULT ''"))
         if "is_persistent" not in inbox_columns:
             connection.execute(text("ALTER TABLE inboxes ADD COLUMN is_persistent BOOLEAN DEFAULT 0"))
         if "sender_domain" not in message_columns:
@@ -34,3 +46,15 @@ def init_db() -> None:
             connection.execute(text("ALTER TABLE messages ADD COLUMN verification_link VARCHAR(1000) DEFAULT ''"))
         if "is_unread" not in message_columns:
             connection.execute(text("ALTER TABLE messages ADD COLUMN is_unread BOOLEAN DEFAULT 1"))
+        connection.execute(
+            text(
+                "UPDATE inboxes SET local_part = lower(substr(address, 1, instr(address, '@') - 1)) "
+                "WHERE local_part = '' OR local_part IS NULL"
+            )
+        )
+        connection.execute(
+            text(
+                "UPDATE inboxes SET domain = lower(substr(address, instr(address, '@') + 1)) "
+                "WHERE domain = '' OR domain IS NULL"
+            )
+        )
