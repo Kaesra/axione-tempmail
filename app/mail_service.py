@@ -9,7 +9,7 @@ from sqlalchemy import delete, desc, func, select
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Inbox, Message
-from app.utils import detect_message_kind, extract_codes, extract_links, html_to_text, pick_verification_link, summarize_text
+from app.utils import detect_message_category, detect_message_kind, extract_codes, extract_links, html_to_text, pick_verification_link, summarize_text
 
 
 def normalize_address(address: str) -> str:
@@ -30,6 +30,7 @@ def _message_payload(message: Message) -> dict:
         "subject": message.subject,
         "received_at": message.received_at,
         "codes": extract_codes(message.subject, message.text_body, message.html_body),
+        "message_category": message.message_category,
         "message_kind": message.message_kind,
         "verification_link": message.verification_link,
         "is_unread": message.is_unread,
@@ -46,6 +47,41 @@ def sanitize_ip_label(ip_address: str) -> str:
     return sanitize_local_part(ip_address.replace(":", "-").replace(".", "-")) or "unknown-ip"
 
 
+def _inbox_payload(session, inbox: Inbox) -> dict:
+    latest_message = session.scalar(
+        select(Message)
+        .where(Message.inbox_address == inbox.address)
+        .order_by(desc(Message.received_at), desc(Message.id))
+        .limit(1)
+    )
+    message_count = session.scalar(select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address)) or 0
+    unread_count = session.scalar(
+        select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.is_unread.is_(True))
+    ) or 0
+    verification_count = session.scalar(
+        select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.message_kind.in_(["verification", "password_reset", "login_link", "code"]))
+    ) or 0
+    return {
+        "local_part": inbox.local_part,
+        "domain": inbox.domain,
+        "address": inbox.address,
+        "profile_name": inbox.profile_name,
+        "profile_type": inbox.profile_type,
+        "inbox_mode": inbox.inbox_mode,
+        "is_persistent": inbox.is_persistent,
+        "requires_approval": inbox.requires_approval,
+        "is_approved": inbox.is_approved,
+        "approved_at": inbox.approved_at,
+        "expires_at": inbox.expires_at,
+        "created_at": inbox.created_at,
+        "message_count": message_count,
+        "unread_count": unread_count,
+        "verification_count": verification_count,
+        "latest_message_at": latest_message.received_at if latest_message else None,
+        "latest_subject": latest_message.subject if latest_message else "",
+    }
+
+
 def is_domain_allowed(domain: str) -> bool:
     if settings.allow_any_domain:
         return True
@@ -58,10 +94,15 @@ def ensure_inbox(
     is_persistent: bool = False,
     profile_name: str = "Inbox",
     profile_type: str = "manual",
+    inbox_mode: str = "temp",
     source_ip: str = "",
 ) -> Inbox:
     normalized = normalize_address(address)
     local_part, domain = split_address(normalized)
+    now = datetime.utcnow()
+    requires_approval = inbox_mode == "personal"
+    approved = not requires_approval
+    expires_at = None if inbox_mode == "personal" else now + timedelta(minutes=settings.temp_inbox_minutes)
     with SessionLocal() as session:
         inbox_count = session.scalar(select(func.count()).select_from(Inbox)) or 0
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
@@ -78,8 +119,13 @@ def ensure_inbox(
                 owner_username=owner_username,
                 profile_name=profile_name,
                 profile_type=profile_type,
+                inbox_mode=inbox_mode,
                 source_ip=source_ip,
-                is_persistent=is_persistent,
+                is_persistent=is_persistent or inbox_mode == "personal",
+                requires_approval=requires_approval,
+                is_approved=approved,
+                approved_at=now if approved else None,
+                expires_at=expires_at,
             )
             session.add(inbox)
             session.commit()
@@ -105,33 +151,49 @@ def set_inbox_persistent(address: str, owner_username: str, is_persistent: bool)
         return inbox
 
 
+def approve_personal_inbox(inbox_id: int) -> dict | None:
+    with SessionLocal() as session:
+        inbox = session.get(Inbox, inbox_id)
+        if inbox is None:
+            return None
+        inbox.requires_approval = False
+        inbox.is_approved = True
+        inbox.approved_at = datetime.utcnow()
+        inbox.is_persistent = True
+        inbox.expires_at = None
+        session.commit()
+        session.refresh(inbox)
+        return _inbox_payload(session, inbox)
+
+
+def list_pending_personal_inboxes() -> list[dict]:
+    with SessionLocal() as session:
+        inboxes = session.scalars(
+            select(Inbox)
+            .where(Inbox.inbox_mode == "personal", Inbox.is_approved.is_(False))
+            .order_by(Inbox.created_at)
+        ).all()
+        return [
+            {
+                "id": inbox.id,
+                "address": inbox.address,
+                "owner_username": inbox.owner_username,
+                "profile_name": inbox.profile_name,
+                "created_at": inbox.created_at,
+            }
+            for inbox in inboxes
+        ]
+
+
 def ensure_default_inboxes(owner_username: str, client_ip: str, domain: str) -> None:
-    personal_local = sanitize_local_part(owner_username)
-    try:
-        ensure_inbox(
-            f"{personal_local}@{domain}",
-            owner_username=owner_username,
-            is_persistent=True,
-            profile_name="Kisisel Profil",
-            profile_type="personal",
-            source_ip=client_ip,
-        )
-    except ValueError:
-        ensure_inbox(
-            f"{personal_local}-profile@{domain}",
-            owner_username=owner_username,
-            is_persistent=True,
-            profile_name="Kisisel Profil",
-            profile_type="personal",
-            source_ip=client_ip,
-        )
     ip_address = f"ip-{sanitize_ip_label(client_ip)}-{sanitize_local_part(owner_username)[:12]}@{domain}"
     ensure_inbox(
         ip_address,
         owner_username=owner_username,
-        is_persistent=True,
+        is_persistent=False,
         profile_name=f"IP Profil {client_ip}",
         profile_type="ip",
+        inbox_mode="temp",
         source_ip=client_ip,
     )
 
@@ -141,42 +203,10 @@ def list_inboxes(owner_username: str) -> list[dict]:
         inboxes = session.scalars(
             select(Inbox)
             .where(Inbox.owner_username == owner_username)
+            .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()))
             .order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))
         ).all()
-        result: list[dict] = []
-        for inbox in inboxes:
-            latest_message = session.scalar(
-                select(Message)
-                .where(Message.inbox_address == inbox.address)
-                .order_by(desc(Message.received_at), desc(Message.id))
-                .limit(1)
-            )
-            message_count = session.scalar(
-                select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address)
-            ) or 0
-            unread_count = session.scalar(
-                select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.is_unread.is_(True))
-            ) or 0
-            verification_count = session.scalar(
-                select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.message_kind.in_(["verification", "password_reset", "login_link", "code"]))
-            ) or 0
-            result.append(
-                {
-                    "local_part": inbox.local_part,
-                    "domain": inbox.domain,
-                    "address": inbox.address,
-                    "profile_name": inbox.profile_name,
-                    "profile_type": inbox.profile_type,
-                    "is_persistent": inbox.is_persistent,
-                    "created_at": inbox.created_at,
-                    "message_count": message_count,
-                    "unread_count": unread_count,
-                    "verification_count": verification_count,
-                    "latest_message_at": latest_message.received_at if latest_message else None,
-                    "latest_subject": latest_message.subject if latest_message else "",
-                }
-            )
-        return result
+        return [_inbox_payload(session, inbox) for inbox in inboxes]
 
 
 def _trim_inbox_messages(session, address: str) -> None:
@@ -185,6 +215,8 @@ def _trim_inbox_messages(session, address: str) -> None:
 
     inbox = session.scalar(select(Inbox).where(Inbox.address == address))
     if inbox and inbox.is_persistent:
+        return
+    if inbox and inbox.inbox_mode == "personal":
         return
 
     message_ids = session.scalars(
@@ -203,6 +235,9 @@ def cleanup_expired_messages() -> int:
 
     cutoff = datetime.utcnow() - timedelta(hours=settings.message_ttl_hours)
     with SessionLocal() as session:
+        expired_temp_addresses = select(Inbox.address).where(Inbox.expires_at.is_not(None), Inbox.expires_at < datetime.utcnow())
+        session.execute(delete(Message).where(Message.inbox_address.in_(expired_temp_addresses)))
+        session.execute(delete(Inbox).where(Inbox.expires_at.is_not(None), Inbox.expires_at < datetime.utcnow()))
         persistent_inboxes = select(Inbox.address).where(Inbox.is_persistent.is_(True))
         result = session.execute(
             delete(Message)
@@ -258,6 +293,7 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
     sender_domain = split_address(mail_from or "unknown@sender")[1]
     codes = extract_codes(subject, text_body, html_body)
     links = extract_links(text_body, html_body)
+    message_category = detect_message_category(sender_domain, subject, text_body)
     message_kind = detect_message_kind(subject, text_body, html_body, codes, links)
     verification_link = pick_verification_link(links)
 
@@ -274,6 +310,7 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
                     mail_from=normalize_address(mail_from or "unknown@sender"),
                     sender_domain=sender_domain,
                     subject=subject,
+                    message_category=message_category,
                     message_kind=message_kind,
                     verification_link=verification_link,
                     is_unread=True,
@@ -291,7 +328,7 @@ def list_messages(owner_username: str, address: str) -> list[dict]:
     normalized = normalize_address(address)
     with SessionLocal() as session:
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == owner_username))
-        if inbox is None:
+        if inbox is None or (inbox.expires_at and inbox.expires_at <= datetime.utcnow()):
             return []
         messages = session.scalars(
             select(Message).where(Message.inbox_address == normalized).order_by(desc(Message.received_at))
@@ -305,7 +342,7 @@ def get_message(owner_username: str, message_id: int) -> dict | None:
         if message is None:
             return None
         inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
-        if inbox is None:
+        if inbox is None or (inbox.expires_at and inbox.expires_at <= datetime.utcnow()):
             return None
         message.is_unread = False
         session.commit()
@@ -322,7 +359,7 @@ def delete_inbox_messages(owner_username: str, address: str) -> int:
     normalized = normalize_address(address)
     with SessionLocal() as session:
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == owner_username))
-        if inbox is None:
+        if inbox is None or (inbox.expires_at and inbox.expires_at <= datetime.utcnow()):
             return 0
         result = session.execute(delete(Message).where(Message.inbox_address == normalized))
         session.commit()
@@ -335,7 +372,7 @@ def delete_message(owner_username: str, message_id: int) -> int:
         if message is None:
             return 0
         inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
-        if inbox is None:
+        if inbox is None or (inbox.expires_at and inbox.expires_at <= datetime.utcnow()):
             return 0
         result = session.execute(delete(Message).where(Message.id == message_id))
         session.commit()
@@ -348,7 +385,7 @@ def set_message_unread(owner_username: str, message_id: int, is_unread: bool) ->
         if message is None:
             return None
         inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
-        if inbox is None:
+        if inbox is None or (inbox.expires_at and inbox.expires_at <= datetime.utcnow()):
             return None
         message.is_unread = is_unread
         session.commit()
