@@ -5,6 +5,7 @@ function mailDesk() {
     acceptedDomains: initial.acceptedDomains || ['axione.xyz'],
     pollSeconds: initial.pollSeconds,
     currentUser: initial.currentUser,
+    adminUsername: initial.adminUsername || 'admin',
     search: '',
     composeOpen: false,
     composeError: '',
@@ -41,9 +42,10 @@ function mailDesk() {
         let message = 'Istek basarisiz'
         try {
           const payload = await response.json()
-          message = payload.detail || payload.message || message
+          const candidate = payload.detail || payload.message || payload
+          message = this.normalizeError(candidate)
         } catch {
-          message = await response.text() || message
+          message = this.normalizeError(await response.text() || message)
         }
         if (response.status === 401) this.auth.user = null
         throw new Error(message)
@@ -250,6 +252,18 @@ function mailDesk() {
 
     setNotice(text, type = 'success') {
       this.notice = { text, type }
+    },
+
+    normalizeError(value) {
+      if (typeof value === 'string') return value
+      if (Array.isArray(value)) return value.map((item) => this.normalizeError(item)).join(', ')
+      if (value && typeof value === 'object') {
+        if (typeof value.msg === 'string') return value.msg
+        if (typeof value.message === 'string') return value.message
+        if (typeof value.detail === 'string') return value.detail
+        return JSON.stringify(value)
+      }
+      return String(value || 'Istek basarisiz')
     },
 
     clearNotice() {
