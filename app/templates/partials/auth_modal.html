@@ -4,6 +4,11 @@
       <p class="mono text-xs uppercase tracking-[0.35em] text-[#174ea6]">Restricted Access</p>
       <h2 class="mt-4 text-3xl font-medium tracking-tight text-slate-900">Kayit ol, admin onaylasin, sonra posta panosuna gir.</h2>
       <p class="mt-4 text-sm text-slate-700">Bu panel ekip ici kullanim icin kilitli. Kayitlar admin onayi bekler. Onaydan sonra verify mail, kod ve linkleri gorebilirsin.</p>
+      <div class="mt-6 rounded-2xl bg-white/70 px-4 py-4 text-sm text-slate-700">
+        <p class="font-medium text-slate-900">Admin girisi</p>
+        <p class="mt-2"><span class="font-medium">Kullanici adi:</span> <span class="mono" x-text="adminUsername"></span></p>
+        <p class="mt-2"><span class="font-medium">Sifre:</span> `.env` icindeki <span class="mono">TEMPMAIL_ADMIN_PASSWORD</span> degeri</p>
+      </div>
     </div>
     <div class="px-6 py-8 lg:px-8">
       <div class="flex gap-2 rounded-full bg-slate-100 p-1 text-sm font-medium">
