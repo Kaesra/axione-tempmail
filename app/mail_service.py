@@ -9,7 +9,7 @@ from sqlalchemy import delete, desc, func, select
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Inbox, Message
-from app.utils import extract_codes
+from app.utils import detect_message_kind, extract_codes, extract_links, pick_verification_link, summarize_text
 
 
 def normalize_address(address: str) -> str:
@@ -19,6 +19,22 @@ def normalize_address(address: str) -> str:
 def split_address(address: str) -> tuple[str, str]:
     local_part, _, domain = normalize_address(address).partition("@")
     return local_part, domain
+
+
+def _message_payload(message: Message) -> dict:
+    return {
+        "id": message.id,
+        "inbox_address": message.inbox_address,
+        "mail_from": message.mail_from,
+        "sender_domain": message.sender_domain,
+        "subject": message.subject,
+        "received_at": message.received_at,
+        "codes": extract_codes(message.subject, message.text_body, message.html_body),
+        "message_kind": message.message_kind,
+        "verification_link": message.verification_link,
+        "is_unread": message.is_unread,
+        "summary": summarize_text(message.text_body, message.html_body),
+    }
 
 
 def is_domain_allowed(domain: str) -> bool:
@@ -68,12 +84,20 @@ def list_inboxes() -> list[dict]:
             message_count = session.scalar(
                 select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address)
             ) or 0
+            unread_count = session.scalar(
+                select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.is_unread.is_(True))
+            ) or 0
+            verification_count = session.scalar(
+                select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.message_kind.in_(["verification", "password_reset", "login_link", "code"]))
+            ) or 0
             result.append(
                 {
                     "address": inbox.address,
                     "is_persistent": inbox.is_persistent,
                     "created_at": inbox.created_at,
                     "message_count": message_count,
+                    "unread_count": unread_count,
+                    "verification_count": verification_count,
                     "latest_message_at": latest_message.received_at if latest_message else None,
                     "latest_subject": latest_message.subject if latest_message else "",
                 }
@@ -152,6 +176,12 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
             else:
                 text_body = payload
 
+    sender_domain = split_address(mail_from or "unknown@sender")[1]
+    codes = extract_codes(subject, text_body, html_body)
+    links = extract_links(text_body, html_body)
+    message_kind = detect_message_kind(subject, text_body, html_body, codes, links)
+    verification_link = pick_verification_link(links)
+
     with SessionLocal() as session:
         for recipient in rcpt_tos:
             normalized = normalize_address(recipient)
@@ -163,7 +193,11 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
                 Message(
                     inbox_address=normalized,
                     mail_from=normalize_address(mail_from or "unknown@sender"),
+                    sender_domain=sender_domain,
                     subject=subject,
+                    message_kind=message_kind,
+                    verification_link=verification_link,
+                    is_unread=True,
                     text_body=text_body,
                     html_body=html_body,
                     raw_headers=headers,
@@ -180,17 +214,7 @@ def list_messages(address: str) -> list[dict]:
         messages = session.scalars(
             select(Message).where(Message.inbox_address == normalized).order_by(desc(Message.received_at))
         ).all()
-        return [
-            {
-                "id": message.id,
-                "inbox_address": message.inbox_address,
-                "mail_from": message.mail_from,
-                "subject": message.subject,
-                "received_at": message.received_at,
-                "codes": extract_codes(message.subject, message.text_body, message.html_body),
-            }
-            for message in messages
-        ]
+        return [_message_payload(message) for message in messages]
 
 
 def get_message(message_id: int) -> dict | None:
@@ -198,17 +222,15 @@ def get_message(message_id: int) -> dict | None:
         message = session.get(Message, message_id)
         if message is None:
             return None
-        return {
-            "id": message.id,
-            "inbox_address": message.inbox_address,
-            "mail_from": message.mail_from,
-            "subject": message.subject,
-            "received_at": message.received_at,
-            "codes": extract_codes(message.subject, message.text_body, message.html_body),
+        message.is_unread = False
+        session.commit()
+        payload = {
+            **_message_payload(message),
             "text_body": message.text_body,
             "html_body": message.html_body,
             "raw_headers": message.raw_headers,
         }
+        return payload
 
 
 def delete_inbox_messages(address: str) -> int:
@@ -224,6 +246,17 @@ def delete_message(message_id: int) -> int:
         result = session.execute(delete(Message).where(Message.id == message_id))
         session.commit()
         return result.rowcount or 0
+
+
+def set_message_unread(message_id: int, is_unread: bool) -> dict | None:
+    with SessionLocal() as session:
+        message = session.get(Message, message_id)
+        if message is None:
+            return None
+        message.is_unread = is_unread
+        session.commit()
+        session.refresh(message)
+        return _message_payload(message)
 
 
 def counts() -> tuple[int, int]:
