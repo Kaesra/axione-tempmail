@@ -19,69 +19,55 @@
   </head>
   <body class="min-h-screen bg-slate-100 text-slate-900">
     <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_24%),linear-gradient(180deg,_#f8fafc,_#e2e8f0)]"></div>
-    <main
-      x-data="mailDesk({ acceptedDomains: {{ accepted_domains|tojson }}, pollSeconds: {{ poll_seconds }} })"
-      x-init="init()"
-      class="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-3 lg:p-5"
-    >
+    <main x-data="mailDesk({ acceptedDomains: {{ accepted_domains|tojson }}, pollSeconds: {{ poll_seconds }} })" x-init="init()" class="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-4 p-3 lg:p-5">
       <header class="glass flex flex-col gap-4 rounded-[28px] border border-white/60 bg-white/80 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div>
           <p class="mono text-xs uppercase tracking-[0.35em] text-sky-600">Axione Mail Desk</p>
-          <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Gmail tarzinda temp ve kalici inbox kontrolu.</h1>
-          <p class="mt-2 max-w-2xl text-sm text-slate-600 lg:text-base">Tailwind + Alpine.js ile yenilenen arayuz; kalici inbox isaretleme, gelen kodlari hizli yakalama ve API destekli is akislarini ayni ekranda toplar.</p>
+          <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Dogrulama mailleri icin hizlandirilmis inbox masasi.</h1>
+          <p class="mt-2 max-w-3xl text-sm text-slate-600 lg:text-base">OTP, verify link, password reset ve login maillerini otomatik ayiklar; okunmamis takibi, hizli kopyalama ve kalici inbox yonetimi tek panelde calisir.</p>
         </div>
-        <div class="grid gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white sm:grid-cols-3">
-          <div>
-            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Poll</p>
-            <p class="mt-1 text-lg font-semibold" x-text="`${pollSeconds}s`"></p>
-          </div>
-          <div>
-            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Inbox</p>
-            <p class="mt-1 text-lg font-semibold" x-text="inboxes.length"></p>
-          </div>
-          <div>
-            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Aktif</p>
-            <p class="mt-1 truncate text-sm font-semibold text-emerald-300" x-text="activeInbox ? activeInbox.address : 'Secilmedi'"></p>
-          </div>
+        <div class="grid gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white sm:grid-cols-4">
+          <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Poll</p><p class="mt-1 text-lg font-semibold" x-text="`${pollSeconds}s`"></p></div>
+          <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Inbox</p><p class="mt-1 text-lg font-semibold" x-text="inboxes.length"></p></div>
+          <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Okunmamis</p><p class="mt-1 text-lg font-semibold text-amber-300" x-text="totalUnread()"></p></div>
+          <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Dogrulama</p><p class="mt-1 text-lg font-semibold text-emerald-300" x-text="totalVerification()"></p></div>
         </div>
       </header>
 
-      <section class="grid min-h-[calc(100vh-180px)] gap-4 lg:grid-cols-[300px_minmax(340px,420px)_minmax(0,1fr)]">
+      <section class="grid min-h-[calc(100vh-190px)] gap-4 lg:grid-cols-[320px_minmax(360px,460px)_minmax(0,1fr)]">
         <aside class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/82 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
           <div class="rounded-[24px] bg-sky-50 p-4 shadow-inner shadow-sky-100">
             <div class="grid gap-3">
               <input x-model="form.localPart" type="text" placeholder="inbox adi veya bos birak" class="rounded-2xl border-slate-200 bg-white/80 text-sm focus:border-sky-400 focus:ring-sky-400">
               <select x-model="form.domain" class="rounded-2xl border-slate-200 bg-white/80 text-sm focus:border-sky-400 focus:ring-sky-400">
-                <template x-for="domain in acceptedDomains" :key="domain">
-                  <option :value="domain" x-text="domain"></option>
-                </template>
+                <template x-for="domain in acceptedDomains" :key="domain"><option :value="domain" x-text="domain"></option></template>
               </select>
-              <label class="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
-                <input x-model="form.isPersistent" type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
-                Kalici inbox olarak isaretle
-              </label>
+              <label class="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700"><input x-model="form.isPersistent" type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">Kalici inbox olarak isaretle</label>
               <button @click="createInbox()" class="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Yeni Inbox Olustur</button>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-3">
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Odak Filtreleri</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+              <button @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'bg-slate-950 text-white' : 'bg-white text-slate-600'" class="rounded-full px-3 py-2">Tum</button>
+              <button @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'" class="rounded-full px-3 py-2">Dogrulama</button>
+              <button @click="filter.mode = 'unread'" :class="filter.mode === 'unread' ? 'bg-amber-500 text-white' : 'bg-white text-slate-600'" class="rounded-full px-3 py-2">Okunmamis</button>
             </div>
           </div>
 
           <div class="mt-4 flex items-center justify-between">
             <div>
               <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Inbox'lar</p>
-              <p class="text-sm text-slate-500">Kalicilar ustte kalir</p>
+              <p class="text-sm text-slate-500">Kalicilar ve veri yogun kutular ustte kalir</p>
             </div>
             <button @click="fetchInboxes()" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-sky-300 hover:text-sky-700">Yenile</button>
           </div>
 
           <div class="mail-scroll mt-4 flex-1 space-y-2 overflow-auto pr-1">
-            <template x-if="!inboxes.length">
-              <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Henuz inbox yok. Ilk kutuyu olustur.</div>
-            </template>
+            <template x-if="!inboxes.length"><div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Henuz inbox yok. Ilk kutuyu olustur.</div></template>
             <template x-for="inbox in inboxes" :key="inbox.address">
-              <button
-                @click="selectInbox(inbox.address)"
-                :class="activeInbox && activeInbox.address === inbox.address ? 'border-sky-500 bg-sky-50 shadow-sm' : 'border-transparent bg-slate-50 hover:bg-slate-100'"
-                class="w-full rounded-3xl border px-4 py-3 text-left transition"
-              >
+              <button @click="selectInbox(inbox.address)" :class="activeInbox && activeInbox.address === inbox.address ? 'border-sky-500 bg-sky-50 shadow-sm' : 'border-transparent bg-slate-50 hover:bg-slate-100'" class="w-full rounded-3xl border px-4 py-3 text-left transition">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
@@ -91,9 +77,13 @@
                     <p class="mt-1 truncate text-xs text-slate-500" x-text="inbox.latest_subject || 'Mesaj yok'"></p>
                   </div>
                   <div class="text-right">
-                    <p class="mono text-[11px] text-slate-400" x-text="inbox.message_count"></p>
+                    <p class="mono text-[11px] text-slate-400" x-text="`${inbox.message_count} / ${inbox.unread_count}`"></p>
                     <p class="mt-1 text-[11px] text-slate-400" x-text="formatDate(inbox.latest_message_at)"></p>
                   </div>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <span x-show="inbox.verification_count" class="mono rounded-full bg-emerald-50 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-700" x-text="`${inbox.verification_count} verify`"></span>
+                  <span x-show="inbox.unread_count" class="mono rounded-full bg-amber-50 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-amber-700" x-text="`${inbox.unread_count} unread`"></span>
                 </div>
               </button>
             </template>
@@ -101,38 +91,51 @@
         </aside>
 
         <section class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/82 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-4">
-            <div>
-              <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Aktif Inbox</p>
-              <h2 class="mt-1 text-lg font-bold text-slate-900" x-text="activeInbox ? activeInbox.address : 'Inbox secilmedi'"></h2>
+          <div class="border-b border-slate-200 px-4 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Aktif Inbox</p>
+                <h2 class="mt-1 text-lg font-bold text-slate-900" x-text="activeInbox ? activeInbox.address : 'Inbox secilmedi'"></h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="togglePersistent()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40" x-text="activeInbox && activeInbox.is_persistent ? 'Kaliciyi Kaldir' : 'Kalici Yap'"></button>
+                <button @click="refreshMessages()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">Yenile</button>
+                <button @click="purgeInbox()" :disabled="!activeInbox" class="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40">Temizle</button>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <button @click="togglePersistent()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40" x-text="activeInbox && activeInbox.is_persistent ? 'Kaliciyi Kaldir' : 'Kalici Yap'"></button>
-              <button @click="refreshMessages()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">Yenile</button>
-              <button @click="purgeInbox()" :disabled="!activeInbox" class="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40">Temizle</button>
+            <div class="mt-4 rounded-[24px] bg-slate-950 p-4 text-white" x-show="verificationMessages().length">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Verify Hizi</p>
+                  <p class="mt-1 text-sm text-slate-300">Son mesajlardan dogrulama odakli olanlar.</p>
+                </div>
+                <span class="mono rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-emerald-300" x-text="`${verificationMessages().length} odak`"></span>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <template x-for="message in verificationMessages().slice(0, 3)" :key="message.id">
+                  <button @click="loadMessage(message.id)" class="rounded-full bg-white/10 px-3 py-2 text-left text-xs text-white transition hover:bg-white/20">
+                    <span class="font-semibold" x-text="message.codes[0] || message.sender_domain || 'verify'"></span>
+                    <span class="ml-2 text-slate-300" x-text="labelForKind(message.message_kind)"></span>
+                  </button>
+                </template>
+              </div>
             </div>
           </div>
 
           <div class="mail-scroll flex-1 overflow-auto px-3 py-3">
-            <template x-if="!messages.length">
-              <div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Bu inbox icin henuz mesaj yok.</div>
-            </template>
+            <template x-if="!filteredMessages().length"><div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Secili filtreye gore mesaj yok.</div></template>
             <div class="space-y-2">
-              <template x-for="message in messages" :key="message.id">
-                <button
-                  @click="loadMessage(message.id)"
-                  :class="selectedMessage && selectedMessage.id === message.id ? 'border-sky-500 bg-sky-50' : 'border-transparent bg-white hover:bg-slate-50'"
-                  class="w-full rounded-[24px] border px-4 py-4 text-left shadow-sm transition"
-                >
+              <template x-for="message in filteredMessages()" :key="message.id">
+                <button @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'border-sky-500 bg-sky-50' : 'border-transparent bg-white hover:bg-slate-50'" class="w-full rounded-[24px] border px-4 py-4 text-left shadow-sm transition">
                   <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
+                        <span x-show="message.is_unread" class="h-2.5 w-2.5 rounded-full bg-sky-500"></span>
                         <span class="truncate text-sm font-bold text-slate-900" x-text="message.subject || 'Konu yok'"></span>
-                        <template x-if="message.codes.length">
-                          <span class="mono rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700">Kod var</span>
-                        </template>
+                        <span x-show="message.codes.length" class="mono rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700">Kod</span>
+                        <span x-show="message.message_kind !== 'general'" class="mono rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-emerald-700" x-text="labelForKind(message.message_kind)"></span>
                       </div>
-                      <p class="mt-1 truncate text-xs text-slate-500" x-text="message.mail_from"></p>
+                      <p class="mt-1 text-xs text-slate-500"><span x-text="message.mail_from"></span> <span class="mx-1">-</span> <span x-text="message.summary || 'Onizleme yok'"></span></p>
                     </div>
                     <div class="text-right text-xs text-slate-400">
                       <p x-text="formatDate(message.received_at)"></p>
@@ -151,48 +154,51 @@
               <div>
                 <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Mesaj Detayi</p>
                 <h2 class="mt-1 text-xl font-bold text-slate-900" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Mesaj secilmedi'"></h2>
-                <p class="mt-2 text-sm text-slate-500" x-text="selectedMessage ? selectedMessage.mail_from : 'Bir mesaja tikla' "></p>
+                <p class="mt-2 text-sm text-slate-500" x-text="selectedMessage ? selectedMessage.mail_from : 'Bir mesaja tikla'"></p>
               </div>
-              <button @click="deleteSelectedMessage()" :disabled="!selectedMessage" class="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Mesaji Sil</button>
+              <div class="flex gap-2">
+                <button @click="toggleSelectedUnread()" :disabled="!selectedMessage" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-amber-300 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40" x-text="selectedMessage && selectedMessage.is_unread ? 'Okundu Yap' : 'Okunmamis Yap'"></button>
+                <button @click="deleteSelectedMessage()" :disabled="!selectedMessage" class="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Mesaji Sil</button>
+              </div>
             </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
-                <button @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200" x-text="code"></button>
-              </template>
+            <div class="mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]" x-show="selectedMessageDetail">
+              <div class="rounded-[24px] bg-slate-950 px-4 py-4 text-white">
+                <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Verify Kiti</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code"><button @click="copyText(code)" class="mono rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/25" x-text="code"></button></template>
+                  <button x-show="selectedMessageDetail?.verification_link" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-600">Verify Link Ac</button>
+                  <button x-show="selectedMessageDetail?.verification_link" @click="copyText(selectedMessageDetail.verification_link)" class="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20">Linki Kopyala</button>
+                </div>
+                <p class="mt-4 text-sm text-slate-300"><span class="font-semibold text-white">Tur:</span> <span x-text="selectedMessageDetail ? labelForKind(selectedMessageDetail.message_kind) : '-' "></span></p>
+              </div>
+              <div class="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Kaynak</p>
+                <p class="mt-2 break-all text-sm font-semibold text-slate-900" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
+                <p class="mt-3 text-xs text-slate-500">Gonderici domainine gore servis tespiti daha hizli olur.</p>
+              </div>
             </div>
           </div>
 
           <div class="mail-scroll flex-1 overflow-auto px-5 py-5">
             <template x-if="selectedMessageDetail">
               <div class="space-y-5">
-                <div class="rounded-[24px] bg-slate-950 px-4 py-4 text-white">
-                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Hizli Bilgi</p>
-                  <div class="mt-3 grid gap-3 md:grid-cols-2">
-                    <div>
-                      <p class="text-xs text-slate-400">Gonderen</p>
-                      <p class="mt-1 break-all text-sm font-semibold" x-text="selectedMessageDetail.mail_from"></p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-slate-400">Alici</p>
-                      <p class="mt-1 break-all text-sm font-semibold" x-text="selectedMessageDetail.inbox_address"></p>
-                    </div>
-                  </div>
-                </div>
-
                 <div class="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
-                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Text Body</p>
+                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Mesaj Govdesi</p>
                   <pre class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700" x-text="selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi'"></pre>
                 </div>
-
+                <template x-if="selectedMessageDetail.verification_link">
+                  <div class="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4">
+                    <p class="mono text-[11px] uppercase tracking-[0.25em] text-emerald-700">Dogrulama Linki</p>
+                    <p class="mt-3 break-all text-sm text-emerald-900" x-text="selectedMessageDetail.verification_link"></p>
+                  </div>
+                </template>
                 <details class="rounded-[24px] border border-slate-200 bg-white px-4 py-4">
                   <summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw Headers</summary>
                   <pre class="mono mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-500" x-text="selectedMessageDetail.raw_headers"></pre>
                 </details>
               </div>
             </template>
-            <template x-if="!selectedMessageDetail">
-              <div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Soldan bir inbox, ortadan bir mesaj sec.</div>
-            </template>
+            <template x-if="!selectedMessageDetail"><div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Soldan bir inbox, ortadan bir mesaj sec.</div></template>
           </div>
         </section>
       </section>
@@ -203,123 +209,83 @@
         return {
           acceptedDomains,
           pollSeconds,
-          inboxes: [],
-          messages: [],
-          activeInbox: null,
-          selectedMessage: null,
-          selectedMessageDetail: null,
-          poller: null,
-          form: {
-            localPart: '',
-            domain: acceptedDomains[0] || 'axione.xyz',
-            isPersistent: false,
-          },
+          inboxes: [], messages: [], activeInbox: null, selectedMessage: null, selectedMessageDetail: null, poller: null,
+          filter: { mode: 'all' },
+          form: { localPart: '', domain: acceptedDomains[0] || 'axione.xyz', isPersistent: false },
 
-          async init() {
-            await this.fetchInboxes();
-            this.startPolling();
-          },
-
+          async init() { await this.fetchInboxes(); this.startPolling(); },
           async api(url, options = {}) {
-            const response = await fetch(url, {
-              headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-              ...options,
-            });
-            if (!response.ok) {
-              const payload = await response.text();
-              throw new Error(payload || 'Istek basarisiz');
-            }
+            const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+            if (!response.ok) { const payload = await response.text(); throw new Error(payload || 'Istek basarisiz'); }
             if (response.status === 204) return null;
             const contentType = response.headers.get('content-type') || '';
             return contentType.includes('application/json') ? response.json() : response.text();
           },
-
           async fetchInboxes() {
             this.inboxes = await this.api('/api/inboxes');
-            if (!this.activeInbox && this.inboxes[0]) {
-              await this.selectInbox(this.inboxes[0].address);
-            } else if (this.activeInbox) {
+            if (!this.activeInbox && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address);
+            else if (this.activeInbox) {
               const fresh = this.inboxes.find((item) => item.address === this.activeInbox.address);
               if (fresh) this.activeInbox = fresh;
             }
           },
-
           async createInbox() {
-            const inbox = await this.api('/api/inboxes', {
-              method: 'POST',
-              body: JSON.stringify({
-                local_part: this.form.localPart || null,
-                domain: this.form.domain || null,
-                is_persistent: this.form.isPersistent,
-              }),
-            });
+            const inbox = await this.api('/api/inboxes', { method: 'POST', body: JSON.stringify({ local_part: this.form.localPart || null, domain: this.form.domain || null, is_persistent: this.form.isPersistent }) });
             this.form.localPart = '';
             await this.fetchInboxes();
             await this.selectInbox(inbox.address);
           },
-
           async selectInbox(address) {
             this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`);
             await this.refreshMessages();
           },
-
           async refreshMessages() {
             if (!this.activeInbox) return;
             this.messages = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`);
             await this.fetchInboxes();
-            if (!this.messages.length) {
-              this.selectedMessage = null;
-              this.selectedMessageDetail = null;
-              return;
-            }
+            if (!this.messages.length) { this.selectedMessage = null; this.selectedMessageDetail = null; return; }
             const currentId = this.selectedMessage?.id;
-            const nextMessage = this.messages.find((item) => item.id === currentId) || this.messages[0];
-            await this.loadMessage(nextMessage.id);
+            const nextMessage = this.messages.find((item) => item.id === currentId) || this.filteredMessages()[0] || this.messages[0];
+            if (nextMessage) await this.loadMessage(nextMessage.id);
           },
-
           async loadMessage(messageId) {
             this.selectedMessageDetail = await this.api(`/api/messages/${messageId}`);
             this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail;
+            if (this.selectedMessage) this.selectedMessage.is_unread = false;
+            await this.fetchInboxes();
           },
-
           async togglePersistent() {
             if (!this.activeInbox) return;
-            const updated = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}`, {
-              method: 'PATCH',
-              body: JSON.stringify({ is_persistent: !this.activeInbox.is_persistent }),
-            });
+            const updated = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}`, { method: 'PATCH', body: JSON.stringify({ is_persistent: !this.activeInbox.is_persistent }) });
             this.activeInbox = updated;
             await this.fetchInboxes();
           },
-
-          async purgeInbox() {
-            if (!this.activeInbox) return;
-            await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`, { method: 'DELETE' });
-            await this.refreshMessages();
-          },
-
-          async deleteSelectedMessage() {
+          async toggleSelectedUnread() {
             if (!this.selectedMessage) return;
-            await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'DELETE' });
-            await this.refreshMessages();
+            const updated = await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'PATCH', body: JSON.stringify({ is_unread: !this.selectedMessage.is_unread }) });
+            const index = this.messages.findIndex((item) => item.id === updated.id);
+            if (index >= 0) this.messages[index] = { ...this.messages[index], ...updated };
+            this.selectedMessage = { ...(this.selectedMessage || {}), ...updated };
+            if (this.selectedMessageDetail) this.selectedMessageDetail.is_unread = updated.is_unread;
+            await this.fetchInboxes();
           },
-
-          startPolling() {
-            clearInterval(this.poller);
-            this.poller = setInterval(() => {
-              if (this.activeInbox) this.refreshMessages();
-            }, this.pollSeconds * 1000);
+          async purgeInbox() { if (!this.activeInbox) return; await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`, { method: 'DELETE' }); await this.refreshMessages(); },
+          async deleteSelectedMessage() { if (!this.selectedMessage) return; await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'DELETE' }); await this.refreshMessages(); },
+          filteredMessages() {
+            if (this.filter.mode === 'verification') return this.messages.filter((m) => ['verification', 'password_reset', 'login_link', 'code'].includes(m.message_kind));
+            if (this.filter.mode === 'unread') return this.messages.filter((m) => m.is_unread);
+            return this.messages;
           },
-
-          copyText(value) {
-            navigator.clipboard.writeText(value);
-          },
-
-          formatDate(value) {
-            if (!value) return '-';
-            return new Date(value).toLocaleString('tr-TR', {
-              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-            });
+          verificationMessages() { return this.messages.filter((m) => ['verification', 'password_reset', 'login_link', 'code'].includes(m.message_kind)); },
+          totalUnread() { return this.inboxes.reduce((sum, inbox) => sum + (inbox.unread_count || 0), 0); },
+          totalVerification() { return this.inboxes.reduce((sum, inbox) => sum + (inbox.verification_count || 0), 0); },
+          startPolling() { clearInterval(this.poller); this.poller = setInterval(() => { if (this.activeInbox) this.refreshMessages(); }, this.pollSeconds * 1000); },
+          copyText(value) { navigator.clipboard.writeText(value); },
+          openLink(value) { window.open(value, '_blank', 'noopener,noreferrer'); },
+          formatDate(value) { if (!value) return '-'; return new Date(value).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); },
+          labelForKind(kind) {
+            const map = { general: 'Genel', verification: 'Verify', password_reset: 'Reset', login_link: 'Magic Link', code: 'Kod' };
+            return map[kind] || kind;
           },
         }
       }
