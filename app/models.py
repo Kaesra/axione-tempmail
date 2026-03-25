@@ -18,8 +18,13 @@ class Inbox(Base):
     owner_username: Mapped[str] = mapped_column(String(120), default="", index=True)
     profile_name: Mapped[str] = mapped_column(String(120), default="Inbox")
     profile_type: Mapped[str] = mapped_column(String(50), default="manual", index=True)
+    inbox_mode: Mapped[str] = mapped_column(String(30), default="temp", index=True)
     source_ip: Mapped[str] = mapped_column(String(120), default="", index=True)
     is_persistent: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    requires_approval: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
@@ -53,6 +58,7 @@ class Message(Base):
     mail_from: Mapped[str] = mapped_column(String(255), default="")
     sender_domain: Mapped[str] = mapped_column(String(255), default="", index=True)
     subject: Mapped[str] = mapped_column(String(500), default="")
+    message_category: Mapped[str] = mapped_column(String(50), default="primary", index=True)
     message_kind: Mapped[str] = mapped_column(String(50), default="general", index=True)
     verification_link: Mapped[str] = mapped_column(String(1000), default="")
     is_unread: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
