@@ -22,10 +22,11 @@ from app.mail_service import (
     list_inboxes,
     list_messages,
     normalize_address,
+    set_message_unread,
     set_inbox_persistent,
 )
 from app.models import Inbox
-from app.schemas import ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview
+from app.schemas import ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -149,3 +150,11 @@ async def remove_message(message_id: int) -> DeleteResponse:
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Message not found")
     return DeleteResponse(deleted=deleted)
+
+
+@app.patch("/api/messages/{message_id}", response_model=MessagePreview)
+async def update_message(message_id: int, payload: MessageUpdate) -> MessagePreview:
+    message = set_message_unread(message_id, payload.is_unread)
+    if message is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return MessagePreview(**message)
