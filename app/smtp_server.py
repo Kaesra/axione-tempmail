@@ -19,9 +19,23 @@ class TempMailHandler:
         return "250 Message accepted"
 
 
+class TempMailController(Controller):
+    def _trigger_server(self):
+        original_hostname = self.hostname
+        if original_hostname == "0.0.0.0":
+            self.hostname = "127.0.0.1"
+        elif original_hostname == "::":
+            self.hostname = "::1"
+
+        try:
+            super()._trigger_server()
+        finally:
+            self.hostname = original_hostname
+
+
 class SMTPServer:
     def __init__(self) -> None:
-        self.controller = Controller(
+        self.controller = TempMailController(
             TempMailHandler(),
             hostname=settings.smtp_host,
             port=settings.smtp_port,
