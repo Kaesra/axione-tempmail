@@ -10,6 +10,7 @@ class InboxCreate(BaseModel):
     domain: str | None = Field(default=None, min_length=1, max_length=255)
     is_persistent: bool = False
     profile_name: str | None = Field(default=None, min_length=1, max_length=120)
+    inbox_mode: str = Field(default="temp", pattern="^(temp|personal)$")
 
 
 class InboxResponse(BaseModel):
@@ -18,7 +19,12 @@ class InboxResponse(BaseModel):
     address: str
     profile_name: str
     profile_type: str
+    inbox_mode: str
     is_persistent: bool
+    requires_approval: bool
+    is_approved: bool
+    approved_at: datetime | None = None
+    expires_at: datetime | None = None
     created_at: datetime
 
 
@@ -32,7 +38,12 @@ class InboxSummary(BaseModel):
     address: str
     profile_name: str
     profile_type: str
+    inbox_mode: str
     is_persistent: bool
+    requires_approval: bool
+    is_approved: bool
+    approved_at: datetime | None = None
+    expires_at: datetime | None = None
     created_at: datetime
     message_count: int
     unread_count: int
@@ -49,6 +60,7 @@ class MessagePreview(BaseModel):
     subject: str
     received_at: datetime
     codes: list[str]
+    message_category: str
     message_kind: str
     verification_link: str
     is_unread: bool
@@ -86,6 +98,14 @@ class AuthStatusResponse(BaseModel):
 class AuthMessageResponse(BaseModel):
     message: str
     user: UserResponse | None = None
+
+
+class PersonalInboxApproval(BaseModel):
+    id: int
+    address: str
+    owner_username: str
+    profile_name: str
+    created_at: datetime
 
 
 class ConfigResponse(BaseModel):
