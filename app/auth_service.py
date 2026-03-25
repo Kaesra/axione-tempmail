@@ -42,6 +42,21 @@ def ensure_bootstrap_admin() -> None:
             )
             session.add(admin)
             session.commit()
+            return
+
+        changed = False
+        if not admin.is_admin:
+            admin.is_admin = True
+            changed = True
+        if not admin.is_approved:
+            admin.is_approved = True
+            admin.approved_at = admin.approved_at or datetime.utcnow()
+            changed = True
+        if not verify_password(settings.admin_password, admin.password_hash):
+            admin.password_hash = hash_password(settings.admin_password)
+            changed = True
+        if changed:
+            session.commit()
 
 
 def register_user(username: str, password: str) -> User:
