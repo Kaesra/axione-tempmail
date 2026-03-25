@@ -17,16 +17,20 @@ function mailDesk() {
     selectedMessageDetail: null,
     poller: null,
     pendingUsers: [],
-    filter: { mode: 'all' },
+    pendingPersonalInboxes: [],
+    filter: { mode: 'primary' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
-    form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '' },
+    form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
 
     async init() {
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
         await this.fetchInboxes()
-        if (this.auth.user.is_admin) await this.loadPendingUsers()
+        if (this.auth.user.is_admin) {
+          await this.loadPendingUsers()
+          await this.loadPendingPersonalInboxes()
+        }
       }
       this.startPolling()
     },
@@ -107,10 +111,22 @@ function mailDesk() {
       this.pendingUsers = await this.api('/api/admin/users')
     },
 
+    async loadPendingPersonalInboxes() {
+      if (!this.auth.user || !this.auth.user.is_admin) return
+      this.pendingPersonalInboxes = await this.api('/api/admin/inboxes/pending-personal')
+    },
+
     async approveUser(userId) {
       await this.api(`/api/admin/users/${userId}/approve`, { method: 'POST' })
       this.setNotice('Kullanici onaylandi', 'success')
       await this.loadPendingUsers()
+    },
+
+    async approvePersonalInbox(inboxId) {
+      await this.api(`/api/admin/inboxes/${inboxId}/approve-personal`, { method: 'POST' })
+      this.setNotice('Kisisel inbox onaylandi', 'success')
+      await this.loadPendingPersonalInboxes()
+      await this.fetchInboxes()
     },
 
     async fetchInboxes() {
@@ -132,14 +148,17 @@ function mailDesk() {
           body: JSON.stringify({
             local_part: this.form.localPart || null,
             domain: this.form.domain || null,
-            is_persistent: this.form.isPersistent,
+            is_persistent: this.form.isPersistent || this.form.inboxMode === 'personal',
             profile_name: this.form.profileName || null,
+            inbox_mode: this.form.inboxMode,
           }),
         })
         this.form.localPart = ''
         this.form.profileName = ''
+        this.form.inboxMode = 'temp'
+        this.form.isPersistent = false
         this.composeOpen = false
-        this.setNotice(`Inbox olusturuldu: ${inbox.address}`, 'success')
+        this.setNotice(inbox.inbox_mode === 'personal' ? `Kisisel inbox talebi olusturuldu: ${inbox.address}` : `Temp inbox olusturuldu: ${inbox.address}`, 'success')
         await this.fetchInboxes()
         await this.selectInbox(inbox.address)
       } catch (error) {
@@ -205,8 +224,11 @@ function mailDesk() {
 
     filteredMessages() {
       let items = this.messages
+      if (this.filter.mode === 'social') items = items.filter((m) => m.message_category === 'social')
+      if (this.filter.mode === 'spam') items = items.filter((m) => m.message_category === 'spam')
+      if (this.filter.mode === 'updates') items = items.filter((m) => m.message_category === 'updates')
+      if (this.filter.mode === 'primary') items = items.filter((m) => m.message_category === 'primary')
       if (this.filter.mode === 'verification') items = items.filter((m) => ['verification', 'password_reset', 'login_link', 'code'].includes(m.message_kind))
-      if (this.filter.mode === 'unread') items = items.filter((m) => m.is_unread)
       if (this.search.trim()) {
         const q = this.search.trim().toLowerCase()
         items = items.filter((m) => [m.subject, m.mail_from, m.sender_domain, m.summary].join(' ').toLowerCase().includes(q))
@@ -218,11 +240,20 @@ function mailDesk() {
       return this.inboxes.reduce((sum, inbox) => sum + (inbox.unread_count || 0), 0)
     },
 
+    logoSubtitle(inbox) {
+      if (!inbox) return ''
+      if (inbox.inbox_mode === 'personal') return inbox.is_approved ? 'Kisisel' : 'Onay Bekliyor'
+      return inbox.expires_at ? `5 dk temp` : 'Temp'
+    },
+
     startPolling() {
       clearInterval(this.poller)
       this.poller = setInterval(() => {
         if (this.activeInbox && this.auth.user) this.refreshMessages()
-        if (this.auth.user && this.auth.user.is_admin) this.loadPendingUsers()
+        if (this.auth.user && this.auth.user.is_admin) {
+          this.loadPendingUsers()
+          this.loadPendingPersonalInboxes()
+        }
       }, this.pollSeconds * 1000)
     },
 
@@ -248,6 +279,12 @@ function mailDesk() {
       const local = this.form.localPart?.trim() || 'otomatik-uretilecek'
       const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
       return `${local}@${domain}`
+    },
+
+    inboxBadge(inbox) {
+      if (!inbox) return ''
+      if (inbox.inbox_mode === 'personal') return inbox.is_approved ? 'Kisisel' : 'Kisisel Onay'
+      return 'Temp 5 dk'
     },
 
     setNotice(text, type = 'success') {
