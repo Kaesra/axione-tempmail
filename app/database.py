@@ -22,6 +22,15 @@ def init_db() -> None:
 
     inspector = inspect(engine)
     inbox_columns = {column["name"] for column in inspector.get_columns("inboxes")}
+    message_columns = {column["name"] for column in inspector.get_columns("messages")}
     with engine.begin() as connection:
         if "is_persistent" not in inbox_columns:
             connection.execute(text("ALTER TABLE inboxes ADD COLUMN is_persistent BOOLEAN DEFAULT 0"))
+        if "sender_domain" not in message_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN sender_domain VARCHAR(255) DEFAULT ''"))
+        if "message_kind" not in message_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN message_kind VARCHAR(50) DEFAULT 'general'"))
+        if "verification_link" not in message_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN verification_link VARCHAR(1000) DEFAULT ''"))
+        if "is_unread" not in message_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN is_unread BOOLEAN DEFAULT 1"))
