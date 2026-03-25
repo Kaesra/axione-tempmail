@@ -27,6 +27,7 @@
               <div class="min-w-0">
                 <p class="truncate font-medium" x-text="inbox.profile_name || inbox.address"></p>
                 <p class="truncate text-xs text-slate-500" x-text="inbox.address"></p>
+                <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400" x-text="inboxBadge(inbox)"></p>
               </div>
               <span class="shrink-0 text-xs font-medium" x-text="inbox.unread_count || inbox.message_count"></span>
             </div>
