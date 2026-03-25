@@ -87,6 +87,7 @@ async def index(request: Request):
             "allow_any_domain": settings.allow_any_domain,
             "poll_seconds": settings.poll_seconds,
             "current_user": current_user,
+            "admin_username": settings.admin_username,
         },
     )
 
