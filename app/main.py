@@ -24,6 +24,7 @@ from app.auth_service import (
 from app.config import settings
 from app.database import SessionLocal, init_db
 from app.mail_service import (
+    approve_personal_inbox,
     cleanup_expired_messages,
     counts,
     delete_inbox_messages,
@@ -33,13 +34,14 @@ from app.mail_service import (
     get_message,
     is_domain_allowed,
     list_inboxes,
+    list_pending_personal_inboxes,
     list_messages,
     normalize_address,
     set_message_unread,
     set_inbox_persistent,
 )
 from app.models import Inbox
-from app.schemas import AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, UserResponse
+from app.schemas import AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -150,6 +152,19 @@ async def admin_approve_user(user_id: int, _: dict = Depends(require_admin)) -> 
     return UserResponse(**user)
 
 
+@app.get("/api/admin/inboxes/pending-personal", response_model=list[PersonalInboxApproval])
+async def admin_pending_personal_inboxes(_: dict = Depends(require_admin)) -> list[PersonalInboxApproval]:
+    return [PersonalInboxApproval(**item) for item in list_pending_personal_inboxes()]
+
+
+@app.post("/api/admin/inboxes/{inbox_id}/approve-personal", response_model=InboxSummary)
+async def admin_approve_personal_inbox(inbox_id: int, _: dict = Depends(require_admin)) -> InboxSummary:
+    inbox = approve_personal_inbox(inbox_id)
+    if inbox is None:
+        raise HTTPException(status_code=404, detail="Inbox not found")
+    return InboxSummary(**inbox)
+
+
 @app.get("/api/config", response_model=ConfigResponse)
 async def config(_: dict = Depends(require_user)) -> ConfigResponse:
     return ConfigResponse(
@@ -187,6 +202,7 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
             is_persistent=payload.is_persistent,
             profile_name=payload.profile_name or f"{local_part}@{domain}",
             profile_type="manual",
+            inbox_mode=payload.inbox_mode,
         )
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
@@ -198,7 +214,12 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
         address=inbox.address,
         profile_name=inbox.profile_name,
         profile_type=inbox.profile_type,
+        inbox_mode=inbox.inbox_mode,
         is_persistent=inbox.is_persistent,
+        requires_approval=inbox.requires_approval,
+        is_approved=inbox.is_approved,
+        approved_at=inbox.approved_at,
+        expires_at=inbox.expires_at,
         created_at=inbox.created_at,
     )
 
@@ -221,7 +242,7 @@ async def get_inbox(address: str, user: dict = Depends(require_user)) -> InboxRe
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == user["username"]))
         if inbox is None:
             raise HTTPException(status_code=404, detail="Inbox not found")
-        return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+        return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, inbox_mode=inbox.inbox_mode, is_persistent=inbox.is_persistent, requires_approval=inbox.requires_approval, is_approved=inbox.is_approved, approved_at=inbox.approved_at, expires_at=inbox.expires_at, created_at=inbox.created_at)
 
 
 @app.patch("/api/inboxes/{address:path}", response_model=InboxResponse)
@@ -229,7 +250,7 @@ async def update_inbox(address: str, payload: InboxUpdate, user: dict = Depends(
     inbox = set_inbox_persistent(address, user["username"], payload.is_persistent)
     if inbox is None:
         raise HTTPException(status_code=404, detail="Inbox not found")
-    return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+    return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, inbox_mode=inbox.inbox_mode, is_persistent=inbox.is_persistent, requires_approval=inbox.requires_approval, is_approved=inbox.is_approved, approved_at=inbox.approved_at, expires_at=inbox.expires_at, created_at=inbox.created_at)
 
 
 @app.get("/api/messages/{message_id}", response_model=MessageDetail)
