@@ -1,0 +1,15 @@
+[Unit]
+Description=Temp Mail FastAPI + SMTP
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/berkay/goztakip
+EnvironmentFile=/home/berkay/goztakip/.env
+ExecStart=/home/berkay/goztakip/.venv/bin/python /home/berkay/goztakip/run.py
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target
