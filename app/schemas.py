@@ -56,6 +56,29 @@ class MessageUpdate(BaseModel):
     is_unread: bool
 
 
+class AuthRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=120)
+    password: str = Field(min_length=6, max_length=200)
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    is_admin: bool
+    is_approved: bool
+    created_at: datetime
+    approved_at: datetime | None = None
+
+
+class AuthStatusResponse(BaseModel):
+    user: UserResponse | None
+
+
+class AuthMessageResponse(BaseModel):
+    message: str
+    user: UserResponse | None = None
+
+
 class ConfigResponse(BaseModel):
     accepted_domains: list[str]
     allow_any_domain: bool
