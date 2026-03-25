@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Temp Mail Control Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Disposable Mail Gateway</p>
+        <h1>Tek ekrandan inbox uret, kodlari yakala, API ile cek.</h1>
+        <p class="lede">
+          SMTP tarafinda mailleri toplar, web arayuzunde kutulari listeler, API tarafinda gelen kodlari ve mesajlari sunar.
+        </p>
+
+        <div class="panel create-panel">
+          <div>
+            <label for="localPart">Kutu adi</label>
+            <input id="localPart" placeholder="otomatik olusturulsun">
+          </div>
+          <div>
+            <label for="domain">Domain</label>
+            <select id="domain">
+              {% for domain in accepted_domains %}
+              <option value="{{ domain }}">{{ domain }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button id="createInbox">Inbox Olustur</button>
+        </div>
+
+        <div class="status-row">
+          <span>Poll: {{ poll_seconds }} sn</span>
+          <span>{% if allow_any_domain %}Tum domainler acik{% else %}Sadece izinli domainler{% endif %}</span>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="panel inbox-panel">
+          <div class="panel-head">
+            <div>
+              <p class="label">Aktif inbox</p>
+              <h2 id="currentInbox">Heniz secilmedi</h2>
+            </div>
+            <div class="actions">
+              <button id="refreshInbox" class="ghost">Yenile</button>
+              <button id="purgeInbox" class="danger">Temizle</button>
+            </div>
+          </div>
+          <div id="messageList" class="message-list empty">Henuz mesaj yok.</div>
+        </article>
+
+        <article class="panel detail-panel">
+          <div class="panel-head">
+            <div>
+              <p class="label">Mesaj detayi</p>
+              <h2 id="detailSubject">Secili mesaj yok</h2>
+            </div>
+          </div>
+          <div id="detailCodes" class="codes"></div>
+          <pre id="detailBody" class="detail-body">Yeni bir inbox olusturup mail bekleyebilirsin.</pre>
+        </article>
+      </section>
+
+      <section class="panel api-panel">
+        <p class="label">API</p>
+        <div class="api-grid">
+          <code>POST /api/inboxes</code>
+          <code>GET /api/inboxes/{address}/messages</code>
+          <code>GET /api/messages/{id}</code>
+          <code>DELETE /api/inboxes/{address}/messages</code>
+          <code>GET /api/config</code>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const pollSeconds = {{ poll_seconds }};
+      const createButton = document.getElementById('createInbox');
+      const refreshButton = document.getElementById('refreshInbox');
+      const localPartInput = document.getElementById('localPart');
+      const domainSelect = document.getElementById('domain');
+      const currentInbox = document.getElementById('currentInbox');
+      const messageList = document.getElementById('messageList');
+      const detailSubject = document.getElementById('detailSubject');
+      const detailBody = document.getElementById('detailBody');
+      const detailCodes = document.getElementById('detailCodes');
+      const purgeInboxButton = document.getElementById('purgeInbox');
+
+      let activeInbox = null;
+      let poller = null;
+
+      async function createInbox() {
+        const response = await fetch('/api/inboxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local_part: localPartInput.value || null,
+            domain: domainSelect.value || null,
+          }),
+        });
+        const inbox = await response.json();
+        activeInbox = inbox.address;
+        currentInbox.textContent = activeInbox;
+        await refreshMessages();
+        startPolling();
+      }
+
+      async function refreshMessages() {
+        if (!activeInbox) return;
+        const response = await fetch(`/api/inboxes/${encodeURIComponent(activeInbox)}/messages`);
+        const messages = await response.json();
+
+        if (!messages.length) {
+          messageList.className = 'message-list empty';
+          messageList.innerHTML = 'Henuz mesaj yok.';
+          detailSubject.textContent = 'Secili mesaj yok';
+          detailBody.textContent = 'Yeni bir inbox olusturup mail bekleyebilirsin.';
+          detailCodes.innerHTML = '';
+          return;
+        }
+
+        messageList.className = 'message-list';
+        messageList.innerHTML = messages.map((message) => `
+          <button class="message-card" data-id="${message.id}">
+            <span class="message-subject">${message.subject || 'Konu yok'}</span>
+            <span class="message-from">${message.mail_from}</span>
+            <span class="message-time">${new Date(message.received_at).toLocaleString('tr-TR')}</span>
+            <span class="message-codes">${message.codes.length ? message.codes.join(' / ') : 'Kod tespit edilmedi'}</span>
+          </button>
+        `).join('');
+
+        document.querySelectorAll('.message-card').forEach((item) => {
+          item.addEventListener('click', () => loadMessage(item.dataset.id));
+        });
+
+        if (messages[0]) {
+          await loadMessage(messages[0].id, false);
+        }
+      }
+
+      async function purgeInbox() {
+        if (!activeInbox) return;
+        await fetch(`/api/inboxes/${encodeURIComponent(activeInbox)}/messages`, { method: 'DELETE' });
+        await refreshMessages();
+      }
+
+      async function loadMessage(messageId, scroll = true) {
+        const response = await fetch(`/api/messages/${messageId}`);
+        const message = await response.json();
+        detailSubject.textContent = message.subject || 'Konu yok';
+        detailBody.textContent = message.text_body || message.html_body || 'Icerik bulunamadi';
+        detailCodes.innerHTML = message.codes.map((code) => `<span>${code}</span>`).join('');
+        if (scroll) {
+          detailBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+
+      function startPolling() {
+        clearInterval(poller);
+        poller = setInterval(refreshMessages, pollSeconds * 1000);
+      }
+
+      createButton.addEventListener('click', createInbox);
+      refreshButton.addEventListener('click', refreshMessages);
+      purgeInboxButton.addEventListener('click', purgeInbox);
+    </script>
+  </body>
+</html>
