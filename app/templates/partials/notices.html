@@ -1,0 +1,6 @@
+<div x-show="notice.text" x-transition class="mx-3 mt-3 rounded-2xl border px-4 py-3 text-sm shadow-sm lg:mx-4" :class="notice.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+  <div class="flex items-center justify-between gap-3">
+    <span x-text="notice.text"></span>
+    <button @click="clearNotice()" class="rounded-full px-2 py-1 text-xs font-medium">Kapat</button>
+  </div>
+</div>
