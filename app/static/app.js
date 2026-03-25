@@ -277,6 +277,11 @@ function mailDesk() {
       return new Date(value).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })
     },
 
+    formatDateTime(value) {
+      if (!value) return '-'
+      return new Date(value).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    },
+
     messageCounterLabel() {
       const total = this.filteredMessages().length
       return total ? `1-${Math.min(total, 50)} / ${total}` : '0 mesaj'
