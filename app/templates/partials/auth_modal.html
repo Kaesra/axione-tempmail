@@ -1,0 +1,22 @@
+<section x-show="!auth.user" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4">
+  <div class="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-[0_40px_120px_rgba(15,23,42,0.35)] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+    <div class="bg-[#e8f0fe] px-6 py-8 lg:px-8">
+      <p class="mono text-xs uppercase tracking-[0.35em] text-[#174ea6]">Restricted Access</p>
+      <h2 class="mt-4 text-3xl font-medium tracking-tight text-slate-900">Kayit ol, admin onaylasin, sonra posta panosuna gir.</h2>
+      <p class="mt-4 text-sm text-slate-700">Bu panel ekip ici kullanim icin kilitli. Kayitlar admin onayi bekler. Onaydan sonra verify mail, kod ve linkleri gorebilirsin.</p>
+    </div>
+    <div class="px-6 py-8 lg:px-8">
+      <div class="flex gap-2 rounded-full bg-slate-100 p-1 text-sm font-medium">
+        <button @click="auth.mode = 'login'" :class="auth.mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Giris</button>
+        <button @click="auth.mode = 'register'" :class="auth.mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Kayit Ol</button>
+      </div>
+      <div class="mt-6 space-y-4">
+        <input x-model="auth.form.username" type="text" placeholder="kullanici adi" class="rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        <input x-model="auth.form.password" type="password" placeholder="sifre" class="rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        <button @click="auth.mode === 'login' ? login() : register()" class="w-full rounded-2xl bg-[#0b57d0] px-4 py-3 text-sm font-medium text-white hover:bg-[#0842a0]" x-text="auth.mode === 'login' ? 'Giris Yap' : 'Kayit Ol'"></button>
+      </div>
+      <p x-show="auth.message" class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700" x-text="auth.message"></p>
+      <p x-show="auth.error" class="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="auth.error"></p>
+    </div>
+  </div>
+</section>
