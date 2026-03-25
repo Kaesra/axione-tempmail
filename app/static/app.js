@@ -15,6 +15,7 @@ function mailDesk() {
     activeInbox: null,
     selectedMessage: null,
     selectedMessageDetail: null,
+    messageViewOpen: false,
     poller: null,
     pendingUsers: [],
     pendingPersonalInboxes: [],
@@ -179,6 +180,7 @@ function mailDesk() {
       if (!this.messages.length) {
         this.selectedMessage = null
         this.selectedMessageDetail = null
+        this.messageViewOpen = false
         return
       }
       const currentId = this.selectedMessage?.id
@@ -189,8 +191,13 @@ function mailDesk() {
     async loadMessage(messageId) {
       this.selectedMessageDetail = await this.api(`/api/messages/${messageId}`)
       this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail
+      this.messageViewOpen = true
       if (this.selectedMessage) this.selectedMessage.is_unread = false
       await this.fetchInboxes()
+    },
+
+    closeMessageView() {
+      this.messageViewOpen = false
     },
 
     async togglePersistent() {
