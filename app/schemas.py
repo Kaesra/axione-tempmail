@@ -9,10 +9,15 @@ class InboxCreate(BaseModel):
     local_part: str | None = Field(default=None, min_length=1, max_length=64)
     domain: str | None = Field(default=None, min_length=1, max_length=255)
     is_persistent: bool = False
+    profile_name: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class InboxResponse(BaseModel):
+    local_part: str
+    domain: str
     address: str
+    profile_name: str
+    profile_type: str
     is_persistent: bool
     created_at: datetime
 
@@ -22,7 +27,11 @@ class InboxUpdate(BaseModel):
 
 
 class InboxSummary(BaseModel):
+    local_part: str
+    domain: str
     address: str
+    profile_name: str
+    profile_type: str
     is_persistent: bool
     created_at: datetime
     message_count: int
