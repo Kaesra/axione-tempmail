@@ -185,6 +185,20 @@ def list_pending_personal_inboxes() -> list[dict]:
         ]
 
 
+def temp_inbox_creations_today(owner_username: str) -> int:
+    day_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    with SessionLocal() as session:
+        return session.scalar(
+            select(func.count())
+            .select_from(Inbox)
+            .where(
+                Inbox.owner_username == owner_username,
+                Inbox.inbox_mode == "temp",
+                Inbox.created_at >= day_start,
+            )
+        ) or 0
+
+
 def ensure_default_inboxes(owner_username: str, client_ip: str, domain: str) -> None:
     ip_address = f"ip-{sanitize_ip_label(client_ip)}-{sanitize_local_part(owner_username)[:12]}@{domain}"
     ensure_inbox(
