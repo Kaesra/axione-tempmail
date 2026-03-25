@@ -12,19 +12,23 @@
     </div>
 
     <div class="flex border-b border-slate-200 text-sm">
-      <button @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[200px]">
+      <button @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[160px]">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        Tumu
+      </button>
+      <button @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 5.75A1.75 1.75 0 0 1 4.75 4h10.5A1.75 1.75 0 0 1 17 5.75v8.5A1.75 1.75 0 0 1 15.25 16H4.75A1.75 1.75 0 0 1 3 14.25v-8.5Z"/></svg>
         Birincil
       </button>
-      <button @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[200px]">
+      <button @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m9 12 2 2 4-4"/><path stroke-linecap="round" d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z"/></svg>
         Sosyal
       </button>
-      <button @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[200px]">
+      <button @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v4"/><path stroke-linecap="round" d="M12 17h.01"/><path stroke-linecap="round" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
         Spam
       </button>
-      <button @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[200px]">
+      <button @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 2"/></svg>
         Verify
       </button>
@@ -35,7 +39,8 @@
         <div class="grid h-full min-h-[520px] place-items-center px-6 text-center text-slate-500">
           <div>
             <p class="text-lg font-medium text-slate-700">Mesaj yok</p>
-            <p class="mt-2 text-sm">Inbox sec, filtreyi degistir veya yeni mail bekle.</p>
+            <p class="mt-2 text-sm" x-text="messages.length ? 'Bu filtrede mesaj yok. Tum sekmesine gecmeyi dene.' : 'Inbox sec, filtreyi degistir veya yeni mail bekle.'"></p>
+            <button x-show="messages.length && filter.mode !== 'all'" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700">Tum mailleri goster</button>
             <button @click="composeOpen = true" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
           </div>
         </div>
