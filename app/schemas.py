@@ -120,6 +120,22 @@ class ApiKeyCreateResponse(BaseModel):
     message: str
 
 
+class AdminInboxSummary(InboxSummary):
+    owner_username: str
+    source_ip: str
+
+
+class AdminMessagePreview(MessagePreview):
+    owner_username: str
+    inbox_profile_name: str
+
+
+class AdminMessageDetail(AdminMessagePreview):
+    text_body: str
+    html_body: str
+    raw_headers: str
+
+
 class PersonalInboxApproval(BaseModel):
     id: int
     address: str

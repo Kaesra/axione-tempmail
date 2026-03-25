@@ -82,6 +82,22 @@ def _inbox_payload(session, inbox: Inbox) -> dict:
     }
 
 
+def _admin_inbox_payload(session, inbox: Inbox) -> dict:
+    return {
+        **_inbox_payload(session, inbox),
+        "owner_username": inbox.owner_username,
+        "source_ip": inbox.source_ip,
+    }
+
+
+def _admin_message_payload(message: Message, inbox: Inbox | None) -> dict:
+    return {
+        **_message_payload(message),
+        "owner_username": inbox.owner_username if inbox else "",
+        "inbox_profile_name": inbox.profile_name if inbox else message.inbox_address,
+    }
+
+
 def is_domain_allowed(domain: str) -> bool:
     if settings.allow_any_domain:
         return True
@@ -291,6 +307,16 @@ def list_inboxes(owner_username: str) -> list[dict]:
         return [_inbox_payload(session, inbox) for inbox in inboxes]
 
 
+def list_all_inboxes() -> list[dict]:
+    with SessionLocal() as session:
+        inboxes = session.scalars(
+            select(Inbox)
+            .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()))
+            .order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))
+        ).all()
+        return [_admin_inbox_payload(session, inbox) for inbox in inboxes]
+
+
 def _trim_inbox_messages(session, address: str) -> None:
     if settings.max_messages_per_inbox <= 0:
         return
@@ -435,6 +461,44 @@ def get_message(owner_username: str, message_id: int) -> dict | None:
             "raw_headers": message.raw_headers,
         }
         return payload
+
+
+def list_all_messages(limit: int = 100) -> list[dict]:
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(Message, Inbox)
+            .join(Inbox, Inbox.address == Message.inbox_address, isouter=True)
+            .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()) | (Inbox.id.is_(None)))
+            .order_by(desc(Message.received_at), desc(Message.id))
+            .limit(limit)
+        ).all()
+        return [_admin_message_payload(message, inbox) for message, inbox in rows]
+
+
+def get_admin_message(message_id: int) -> dict | None:
+    with SessionLocal() as session:
+        row = session.execute(
+            select(Message, Inbox)
+            .join(Inbox, Inbox.address == Message.inbox_address, isouter=True)
+            .where(Message.id == message_id)
+        ).first()
+        if row is None:
+            return None
+        message, inbox = row
+        payload = {
+            **_admin_message_payload(message, inbox),
+            "text_body": message.text_body,
+            "html_body": message.html_body,
+            "raw_headers": message.raw_headers,
+        }
+        return payload
+
+
+def delete_admin_message(message_id: int) -> int:
+    with SessionLocal() as session:
+        result = session.execute(delete(Message).where(Message.id == message_id))
+        session.commit()
+        return result.rowcount or 0
 
 
 def delete_inbox_messages(owner_username: str, address: str) -> int:

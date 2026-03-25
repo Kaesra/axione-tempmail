@@ -11,8 +11,10 @@ function mailDesk() {
     search: '',
     composeOpen: false,
     accountOpen: false,
+    adminMonitorOpen: false,
     composeError: '',
     apiKeyError: '',
+    adminMonitorError: '',
     notice: { text: '', type: 'success' },
     inboxes: [],
     messages: [],
@@ -24,6 +26,9 @@ function mailDesk() {
     pendingUsers: [],
     pendingPersonalInboxes: [],
     apiKeys: [],
+    adminInboxes: [],
+    adminMessages: [],
+    adminSelectedMessage: null,
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
@@ -38,6 +43,7 @@ function mailDesk() {
         if (this.auth.user.is_admin) {
           await this.loadPendingUsers()
           await this.loadPendingPersonalInboxes()
+          await this.loadAdminOverview()
         }
       }
       this.startPolling()
@@ -101,7 +107,11 @@ function mailDesk() {
         this.setNotice(`Hos geldin ${payload.user.username}`, 'success')
         await this.fetchInboxes()
         await this.loadApiKeys()
-        if (this.auth.user && this.auth.user.is_admin) await this.loadPendingUsers()
+        if (this.auth.user && this.auth.user.is_admin) {
+          await this.loadPendingUsers()
+          await this.loadPendingPersonalInboxes()
+          await this.loadAdminOverview()
+        }
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
@@ -114,10 +124,14 @@ function mailDesk() {
       this.inboxes = []
       this.messages = []
       this.apiKeys = []
+      this.adminInboxes = []
+      this.adminMessages = []
+      this.adminSelectedMessage = null
       this.selectedMessage = null
       this.selectedMessageDetail = null
       this.composeOpen = false
       this.accountOpen = false
+      this.adminMonitorOpen = false
       this.setNotice('Cikis yapildi', 'success')
     },
 
@@ -187,6 +201,49 @@ function mailDesk() {
       await this.fetchInboxes()
     },
 
+    async loadAdminOverview() {
+      if (!this.auth.user || !this.auth.user.is_admin) return
+      this.adminInboxes = await this.api('/api/admin/inboxes/all')
+      this.adminMessages = await this.api('/api/admin/messages/recent')
+    },
+
+    openAdminMonitor() {
+      if (!this.auth.user || !this.auth.user.is_admin) return
+      this.adminMonitorOpen = true
+      this.adminMonitorError = ''
+      this.loadAdminOverview()
+    },
+
+    closeAdminMonitor() {
+      this.adminMonitorOpen = false
+      this.adminMonitorError = ''
+      this.adminSelectedMessage = null
+    },
+
+    async loadAdminMessage(messageId) {
+      this.adminMonitorError = ''
+      try {
+        this.adminSelectedMessage = this.normalizeMessage(await this.api(`/api/admin/messages/${messageId}`))
+      } catch (error) {
+        this.adminMonitorError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async deleteAdminMessage(messageId) {
+      this.adminMonitorError = ''
+      try {
+        await this.api(`/api/admin/messages/${messageId}`, { method: 'DELETE' })
+        this.adminMessages = this.adminMessages.filter((item) => item.id !== messageId)
+        if (this.adminSelectedMessage && this.adminSelectedMessage.id === messageId) this.adminSelectedMessage = null
+        this.setNotice('Admin mesaj kaydi silindi', 'success')
+        await this.loadAdminOverview()
+      } catch (error) {
+        this.adminMonitorError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
     async fetchInboxes() {
       if (!this.auth.user) return
       this.inboxes = await this.api('/api/inboxes')
@@ -243,8 +300,15 @@ function mailDesk() {
         return
       }
       const currentId = this.selectedMessage?.id
-      const nextMessage = this.messages.find((item) => item.id === currentId) || this.filteredMessages()[0] || this.messages[0]
-      if (nextMessage) await this.loadMessage(nextMessage.id)
+      if (currentId && this.messageViewOpen) {
+        const nextMessage = this.messages.find((item) => item.id === currentId)
+        if (nextMessage) await this.loadMessage(nextMessage.id)
+        else {
+          this.selectedMessage = null
+          this.selectedMessageDetail = null
+          this.messageViewOpen = false
+        }
+      }
     },
 
     async loadMessage(messageId) {
@@ -321,6 +385,7 @@ function mailDesk() {
         if (this.auth.user && this.auth.user.is_admin) {
           this.loadPendingUsers()
           this.loadPendingPersonalInboxes()
+          this.loadAdminOverview()
         }
       }, this.pollSeconds * 1000)
     },
@@ -395,6 +460,8 @@ function mailDesk() {
       message.html_body = typeof message.html_body === 'string' ? message.html_body : ''
       message.raw_headers = typeof message.raw_headers === 'string' ? message.raw_headers : ''
       message.is_unread = Boolean(message.is_unread)
+      message.owner_username = typeof message.owner_username === 'string' ? message.owner_username : ''
+      message.inbox_profile_name = typeof message.inbox_profile_name === 'string' ? message.inbox_profile_name : ''
       return message
     },
 

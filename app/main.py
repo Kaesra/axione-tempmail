@@ -30,12 +30,16 @@ from app.mail_service import (
     approve_personal_inbox,
     cleanup_expired_messages,
     counts,
+    delete_admin_message,
     delete_inbox_messages,
     delete_message,
     ensure_default_inboxes,
     ensure_inbox,
+    get_admin_message,
     get_message,
     is_domain_allowed,
+    list_all_inboxes,
+    list_all_messages,
     list_inboxes,
     list_pending_personal_inboxes,
     list_messages,
@@ -45,7 +49,7 @@ from app.mail_service import (
     temp_inbox_creations_today,
 )
 from app.models import Inbox
-from app.schemas import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
+from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -206,6 +210,32 @@ async def admin_approve_personal_inbox(inbox_id: int, _: dict = Depends(require_
     if inbox is None:
         raise HTTPException(status_code=404, detail="Inbox not found")
     return InboxSummary(**inbox)
+
+
+@app.get("/api/admin/inboxes/all", response_model=list[AdminInboxSummary])
+async def admin_all_inboxes(_: dict = Depends(require_admin)) -> list[AdminInboxSummary]:
+    return [AdminInboxSummary(**item) for item in list_all_inboxes()]
+
+
+@app.get("/api/admin/messages/recent", response_model=list[AdminMessagePreview])
+async def admin_recent_messages(_: dict = Depends(require_admin)) -> list[AdminMessagePreview]:
+    return [AdminMessagePreview(**item) for item in list_all_messages()]
+
+
+@app.get("/api/admin/messages/{message_id}", response_model=AdminMessageDetail)
+async def admin_message_detail(message_id: int, _: dict = Depends(require_admin)) -> AdminMessageDetail:
+    message = get_admin_message(message_id)
+    if message is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return AdminMessageDetail(**message)
+
+
+@app.delete("/api/admin/messages/{message_id}", response_model=DeleteResponse)
+async def admin_remove_message(message_id: int, _: dict = Depends(require_admin)) -> DeleteResponse:
+    deleted = delete_admin_message(message_id)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return DeleteResponse(deleted=deleted)
 
 
 @app.get("/api/config", response_model=ConfigResponse)
