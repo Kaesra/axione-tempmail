@@ -8,11 +8,26 @@ from pydantic import BaseModel, Field
 class InboxCreate(BaseModel):
     local_part: str | None = Field(default=None, min_length=1, max_length=64)
     domain: str | None = Field(default=None, min_length=1, max_length=255)
+    is_persistent: bool = False
 
 
 class InboxResponse(BaseModel):
     address: str
+    is_persistent: bool
     created_at: datetime
+
+
+class InboxUpdate(BaseModel):
+    is_persistent: bool
+
+
+class InboxSummary(BaseModel):
+    address: str
+    is_persistent: bool
+    created_at: datetime
+    message_count: int
+    latest_message_at: datetime | None = None
+    latest_subject: str = ""
 
 
 class MessagePreview(BaseModel):
