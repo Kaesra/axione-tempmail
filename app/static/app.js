@@ -175,6 +175,7 @@ function mailDesk() {
     },
 
     async selectInbox(address) {
+      this.messageViewOpen = false
       this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`)
       await this.refreshMessages()
     },
@@ -204,6 +205,7 @@ function mailDesk() {
 
     closeMessageView() {
       this.messageViewOpen = false
+      this.selectedMessageDetail = null
     },
 
     async togglePersistent() {
