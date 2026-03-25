@@ -200,6 +200,7 @@ def temp_inbox_creations_today(owner_username: str) -> int:
 
 
 def ensure_default_inboxes(owner_username: str, client_ip: str, domain: str) -> None:
+    ensure_primary_inbox(owner_username, domain)
     ip_address = f"ip-{sanitize_ip_label(client_ip)}-{sanitize_local_part(owner_username)[:12]}@{domain}"
     ensure_inbox(
         ip_address,
@@ -210,6 +211,73 @@ def ensure_default_inboxes(owner_username: str, client_ip: str, domain: str) -> 
         inbox_mode="temp",
         source_ip=client_ip,
     )
+
+
+def ensure_primary_inbox(owner_username: str, domain: str) -> None:
+    local_part = sanitize_local_part(owner_username)
+    normalized_domain = domain.strip().lower()
+    if not local_part or not normalized_domain:
+        return
+
+    address = normalize_address(f"{local_part}@{normalized_domain}")
+    now = datetime.utcnow()
+
+    with SessionLocal() as session:
+        inbox = session.scalar(select(Inbox).where(Inbox.address == address))
+        if inbox is None:
+            session.add(
+                Inbox(
+                    local_part=local_part,
+                    domain=normalized_domain,
+                    address=address,
+                    owner_username=owner_username,
+                    profile_name=address,
+                    profile_type="primary",
+                    inbox_mode="personal",
+                    is_persistent=True,
+                    requires_approval=False,
+                    is_approved=True,
+                    approved_at=now,
+                    expires_at=None,
+                )
+            )
+            session.commit()
+            return
+
+        if inbox.owner_username and inbox.owner_username != owner_username:
+            return
+
+        changed = False
+        if inbox.owner_username != owner_username:
+            inbox.owner_username = owner_username
+            changed = True
+        if inbox.profile_name != address:
+            inbox.profile_name = address
+            changed = True
+        if inbox.profile_type != "primary":
+            inbox.profile_type = "primary"
+            changed = True
+        if inbox.inbox_mode != "personal":
+            inbox.inbox_mode = "personal"
+            changed = True
+        if not inbox.is_persistent:
+            inbox.is_persistent = True
+            changed = True
+        if inbox.requires_approval:
+            inbox.requires_approval = False
+            changed = True
+        if not inbox.is_approved:
+            inbox.is_approved = True
+            changed = True
+        if inbox.approved_at is None:
+            inbox.approved_at = now
+            changed = True
+        if inbox.expires_at is not None:
+            inbox.expires_at = None
+            changed = True
+
+        if changed:
+            session.commit()
 
 
 def list_inboxes(owner_username: str) -> list[dict]:
