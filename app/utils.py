@@ -32,6 +32,9 @@ VERIFICATION_HINTS = (
 )
 
 LINK_HINTS = ("verify", "confirm", "activate", "auth", "magic", "token", "reset", "password", "login")
+SOCIAL_DOMAINS = ("facebook", "instagram", "tiktok", "x.com", "twitter", "discord", "telegram", "linkedin", "snapchat")
+SPAM_HINTS = ("casino", "bonus", "win", "prize", "airdrop", "crypto", "gift", "bet", "loan", "investment")
+UPDATE_DOMAINS = ("github", "notion", "slack", "jira", "atlassian", "google", "microsoft", "steam")
 
 
 class HTMLTextExtractor(HTMLParser):
@@ -108,6 +111,18 @@ def detect_message_kind(subject: str, text_body: str, html_body: str, codes: lis
     if codes:
         return "code"
     return "general"
+
+
+def detect_message_category(sender_domain: str, subject: str, text_body: str) -> str:
+    sender = (sender_domain or "").lower()
+    haystack = f"{subject} {text_body}".lower()
+    if any(item in sender for item in SOCIAL_DOMAINS):
+        return "social"
+    if any(item in sender for item in UPDATE_DOMAINS):
+        return "updates"
+    if any(item in haystack for item in SPAM_HINTS):
+        return "spam"
+    return "primary"
 
 
 def pick_verification_link(links: list[str]) -> str:
