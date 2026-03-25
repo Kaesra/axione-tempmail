@@ -27,6 +27,7 @@ class Settings:
     allow_any_domain: bool = _bool("TEMPMAIL_ALLOW_ANY_DOMAIN", False)
     poll_seconds: int = int(os.getenv("TEMPMAIL_POLL_SECONDS", "8"))
     message_ttl_hours: int = int(os.getenv("TEMPMAIL_MESSAGE_TTL_HOURS", "24"))
+    temp_inbox_minutes: int = int(os.getenv("TEMPMAIL_TEMP_INBOX_MINUTES", "5"))
     max_messages_per_inbox: int = int(os.getenv("TEMPMAIL_MAX_MESSAGES_PER_INBOX", "100"))
     max_inboxes: int = int(os.getenv("TEMPMAIL_MAX_INBOXES", "10000"))
     session_hours: int = int(os.getenv("TEMPMAIL_SESSION_HOURS", "72"))
