@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Axione Mail Guide</title>
+    <title>Axione Mail Docs</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,268 +11,326 @@
     <style>
       body { font-family: "Space Grotesk", sans-serif; }
       .mono { font-family: "IBM Plex Mono", monospace; }
-      .grid-fade {
+      .noise {
         background-image:
-          linear-gradient(rgba(14, 116, 144, 0.08) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(14, 116, 144, 0.08) 1px, transparent 1px);
-        background-size: 28px 28px;
+          radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.16), transparent 28%),
+          radial-gradient(circle at 80% 0%, rgba(251, 146, 60, 0.14), transparent 25%),
+          linear-gradient(180deg, #fff 0%, #f7fafc 55%, #eef5fb 100%);
       }
     </style>
   </head>
-  <body class="min-h-screen bg-[#f3f7fb] text-slate-900">
-    <div class="relative overflow-hidden">
-      <div class="absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.24),_transparent_42%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.20),_transparent_35%),linear-gradient(180deg,_#fff_0%,_#f3f7fb_72%)]"></div>
-      <div class="absolute inset-0 grid-fade opacity-70"></div>
-
-      <header class="relative z-10 px-4 py-5 lg:px-8">
-        <div class="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/80 bg-white/80 px-4 py-3 shadow-[0_10px_40px_rgba(15,23,42,0.08)] backdrop-blur">
+  <body class="min-h-screen bg-[#eef5fb] text-slate-900">
+    <div class="noise min-h-screen">
+      <header class="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
           <a href="/" class="flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-sky-100">
+            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-sky-100">
               <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v10H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 8 8 6 8-6"/></svg>
             </div>
             <div>
-              <p class="text-base font-semibold text-slate-900">Axione Mail Guide</p>
-              <p class="mono text-[11px] uppercase tracking-[0.26em] text-sky-700">Deploy + API + SMTP</p>
+              <p class="text-lg font-semibold tracking-tight text-slate-950">Axione Mail Docs</p>
+              <p class="mono text-[11px] uppercase tracking-[0.28em] text-sky-700">Product Guide</p>
             </div>
           </a>
 
           <div class="flex items-center gap-3">
-            <a href="#quick-start" class="hidden text-sm font-medium text-slate-600 transition hover:text-sky-700 lg:block">Quick Start</a>
-            <a href="#services" class="hidden text-sm font-medium text-slate-600 transition hover:text-sky-700 lg:block">Services</a>
-            <a href="#checklist" class="hidden text-sm font-medium text-slate-600 transition hover:text-sky-700 lg:block">Checklist</a>
-            <a href="/" class="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">Mail Desk</a>
+            <a href="#quickstart" class="hidden text-sm font-medium text-slate-600 hover:text-sky-700 lg:block">Quickstart</a>
+            <a href="#api" class="hidden text-sm font-medium text-slate-600 hover:text-sky-700 lg:block">API</a>
+            <a href="#limits" class="hidden text-sm font-medium text-slate-600 hover:text-sky-700 lg:block">Limits</a>
+            <a href="/" class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">Mail Desk</a>
           </div>
         </div>
       </header>
 
-      <main class="relative z-10 px-4 pb-20 lg:px-8">
-        <section class="mx-auto grid max-w-7xl gap-8 pt-8 lg:grid-cols-[minmax(0,1.15fr)_380px] lg:pt-14">
+      <main class="px-4 pb-20 lg:px-8">
+        <section class="mx-auto grid max-w-7xl gap-8 pt-10 lg:grid-cols-[minmax(0,1.2fr)_360px] lg:pt-16">
           <div>
-            <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/90 px-4 py-2 text-sm text-sky-800 shadow-sm">
+            <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-4 py-2 text-sm text-sky-800 shadow-sm">
               <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-              API key gerekir mi sorusunun net cevabi burada
+              Disposable inboxes for signup, testing and verification flows
             </div>
 
-            <h1 class="mt-6 max-w-4xl text-5xl font-bold leading-[1.05] tracking-[-0.04em] text-slate-950 lg:text-7xl">
-              Axione temp mail kurulumunu web uzerinden okunur ve uygulanir hale getirdim.
+            <h1 class="mt-6 max-w-5xl text-5xl font-bold leading-[1.02] tracking-[-0.05em] text-slate-950 lg:text-7xl">
+              Axione Mail'i kullanacak musteriler icin temiz, net ve kullanilabilir dokumantasyon.
             </h1>
 
             <p class="mt-6 max-w-3xl text-lg leading-8 text-slate-600 lg:text-xl">
-              Bu rehber, inbound SMTP, Cloudflare, admin bilgileri, API key gereksinimi ve production'a cikmadan once tamamlaman gereken kritik adimlari tek sayfada toplar.
+              Bu sayfa artik altyapi ekibi icin degil; temp mail hizmetini kullanacak urun ekipleri, test otomasyonu yazanlar ve entegrasyon yapacak musteriler icin hazirlandi.
             </p>
 
             <div class="mt-8 flex flex-wrap gap-3">
-              <a href="#quick-start" class="rounded-full bg-sky-600 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-sky-200 transition hover:bg-sky-700">Kuruluma Basla</a>
-              <a href="#api-keys" class="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:text-sky-700">API Key Detaylari</a>
+              <a href="#quickstart" class="rounded-full bg-sky-600 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-sky-200 transition hover:bg-sky-700">Hemen Basla</a>
+              <a href="#api" class="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:text-sky-700">API Ornekleri</a>
             </div>
 
             <div class="mt-10 grid gap-4 md:grid-cols-3">
-              <div class="rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-sky-700">SMTP</p>
-                <p class="mt-3 text-3xl font-bold text-slate-950">{{ smtp_port }}</p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">Gercek inbound mail icin kritik port. Firewall ve sunucu saglayicisi tarafinda acik olmali.</p>
+              <div class="rounded-3xl border border-white/80 bg-white p-5 shadow-sm">
+                <p class="mono text-xs uppercase tracking-[0.24em] text-sky-700">Domain</p>
+                <p class="mt-3 text-3xl font-bold tracking-tight text-slate-950">{{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Inbox'lar bu domain uzerinde olusur.</p>
               </div>
-              <div class="rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-orange-700">DOMAIN</p>
-                <p class="mt-3 text-3xl font-bold text-slate-950">{{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}</p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">Mail kabul edilen domain. MX ve web host ayarlari bu domaine gore dogru eslenmeli.</p>
+              <div class="rounded-3xl border border-white/80 bg-white p-5 shadow-sm">
+                <p class="mono text-xs uppercase tracking-[0.24em] text-emerald-700">Access</p>
+                <p class="mt-3 text-3xl font-bold tracking-tight text-slate-950">Web + API</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">UI uzerinden kullanabilir, ayni oturumla API'ye de erisebilirsin.</p>
               </div>
-              <div class="rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-emerald-700">WEB</p>
-                <p class="mt-3 text-3xl font-bold text-slate-950">{{ web_port }}</p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">HTTP uygulama portu. Cloudflare Tunnel veya reverse proxy bu porta yonlenir.</p>
+              <div class="rounded-3xl border border-white/80 bg-white p-5 shadow-sm">
+                <p class="mono text-xs uppercase tracking-[0.24em] text-orange-700">Auth</p>
+                <p class="mt-3 text-3xl font-bold tracking-tight text-slate-950">Session</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">UI uzerinden olusturulan API key'ler tekrar tekrar kopyalanabilir ve servis entegrasyonlarinda kullanilabilir.</p>
               </div>
             </div>
           </div>
 
           <aside class="lg:pt-20">
             <div class="rounded-[32px] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
-              <p class="mono text-xs uppercase tracking-[0.26em] text-sky-300">Fast Answer</p>
-              <h2 class="mt-4 text-2xl font-bold tracking-[-0.03em]">Bu proje varsayilan olarak harici mail API key istemez.</h2>
-              <div class="mt-6 space-y-3 text-sm leading-6 text-slate-300">
-                <p>Mail alma tarafi SMTP listener ile calisir.</p>
-                <p>Asil ihtiyac API key degil; dogru MX, acik port 25 ve calisan sunucudur.</p>
-                <p>Cloudflare otomasyonu eklersen token gerekebilir, manuel kurulumda zorunlu degildir.</p>
+              <p class="mono text-xs uppercase tracking-[0.24em] text-sky-300">For Customers</p>
+              <h2 class="mt-4 text-2xl font-bold tracking-[-0.03em]">Bu hizmet nasil tuketilir?</h2>
+              <div class="mt-5 space-y-3 text-sm leading-6 text-slate-300">
+                <p>1. Hesap ac veya admin onayli hesabinla giris yap.</p>
+                <p>2. Inbox olustur veya otomatik inbox'unu kullan.</p>
+                <p>3. Gelen mailleri UI'dan veya API'den cek.</p>
+                <p>4. Kod, link ve icerik alanlarini kullanarak test akisini tamamla.</p>
               </div>
-
-              <div class="mt-8 rounded-3xl bg-white/10 p-4">
-                <p class="mono text-[11px] uppercase tracking-[0.24em] text-slate-300">Current Access</p>
-                <p class="mt-2 text-sm text-white">{% if current_user %}Aktif kullanici: {{ current_user.username }}{% else %}Su anda misafir modunda goruntuleniyor{% endif %}</p>
+              <div class="mt-7 rounded-3xl bg-white/10 p-4 text-sm text-slate-200">
+                {% if current_user %}
+                Aktif oturum bulundu: <span class="font-semibold text-white">{{ current_user.username }}</span>
+                {% else %}
+                Dokumani misafir olarak goruyorsun. API ornekleri icin once giris yapman gerekir.
+                {% endif %}
               </div>
             </div>
           </aside>
         </section>
 
-        <section id="quick-start" class="mx-auto mt-16 max-w-7xl">
-          <div class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-              <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Guide Map</p>
-              <div class="mt-5 space-y-3 text-sm font-medium text-slate-700">
-                <a href="#api-keys" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">API key gerekiyor mu?</a>
-                <a href="#services" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Gerekli servisler</a>
-                <a href="#dns" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">DNS ve MX yapisi</a>
-                <a href="#env" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">.env alanlari</a>
-                <a href="#secrets" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Gizli bilgiler</a>
-                <a href="#checklist" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Production checklist</a>
-              </div>
+        <section id="quickstart" class="mx-auto mt-16 max-w-7xl rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm lg:p-10">
+          <div class="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Quickstart</p>
+              <h2 class="mt-3 text-4xl font-bold tracking-[-0.04em] text-slate-950">3 dakikada ilk inbox</h2>
             </div>
+            <a href="/" class="rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:text-sky-700">Inbox ekranina git</a>
+          </div>
 
-            <div class="space-y-6">
-              <div id="api-keys" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p class="mono text-xs uppercase tracking-[0.24em] text-sky-700">API Keys</p>
-                    <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Hangi noktada key gerekiyor, hangi noktada gerekmiyor?</h2>
-                  </div>
-                  <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700">Core inbound: key yok</span>
-                </div>
-
-                <div class="mt-8 grid gap-4 md:grid-cols-2">
-                  <div class="rounded-3xl bg-slate-50 p-5">
-                    <p class="text-lg font-semibold text-slate-900">Key gerekmeyenler</p>
-                    <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                      <li>SMTP inbound mail alma</li>
-                      <li>SQLite veritabani kullanimi</li>
-                      <li>Admin login ve inbox yonetimi</li>
-                      <li>Cloudflare dashboard uzerinden manuel DNS kurulumu</li>
-                    </ul>
-                  </div>
-                  <div class="rounded-3xl bg-[#fff7ed] p-5">
-                    <p class="text-lg font-semibold text-slate-900">Opsiyonel key veya token gerekenler</p>
-                    <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                      <li>Cloudflare DNS veya Tunnel otomasyonu</li>
-                      <li>GitHub Actions secret tabanli deploy</li>
-                      <li>Harici mail gonderim servisi entegrasyonu</li>
-                      <li>Monitoring ve alerting servisleri</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div id="services" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-orange-700">Services</p>
-                <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Sistemin ayakta kalmasi icin gereken servisler</h2>
-                <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div class="rounded-3xl border border-slate-200 p-5">
-                    <p class="text-lg font-semibold text-slate-900">Web app</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">FastAPI uygulamasi `mail.axione.xyz` gibi bir host uzerinden yayinlanir.</p>
-                  </div>
-                  <div class="rounded-3xl border border-slate-200 p-5">
-                    <p class="text-lg font-semibold text-slate-900">SMTP listener</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Inbound mailleri alan asıl katman. Port 25 erisimi olmadan dis dunyadan mail dusmez.</p>
-                  </div>
-                  <div class="rounded-3xl border border-slate-200 p-5">
-                    <p class="text-lg font-semibold text-slate-900">DNS + MX</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Domain hangi IP'ye ve hangi mail host'una gidecegini burada ogreniyor.</p>
-                  </div>
-                  <div class="rounded-3xl border border-slate-200 p-5">
-                    <p class="text-lg font-semibold text-slate-900">Process manager</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">`systemd` ile uygulama hata aldiginda otomatik tekrar ayaga kalkar.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div id="dns" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-emerald-700">DNS + MX</p>
-                <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Trafik akisi nasil olmali?</h2>
-                <div class="mt-6 grid gap-4 lg:grid-cols-2">
-                  <div class="rounded-3xl bg-slate-50 p-5">
-                    <p class="text-sm font-semibold text-slate-900">Web trafik</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">`mail.axione.xyz` -> Cloudflare Tunnel veya reverse proxy -> `127.0.0.1:{{ web_port }}`</p>
-                  </div>
-                  <div class="rounded-3xl bg-slate-50 p-5">
-                    <p class="text-sm font-semibold text-slate-900">Mail trafik</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">`MX` -> `mx1.axione.xyz` -> sunucu public IP -> `{{ smtp_port }}/tcp` SMTP listener</p>
-                  </div>
-                </div>
-
-                <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100 shadow-xl shadow-slate-200">
-                  <div class="flex items-center gap-2 border-b border-white/10 px-5 py-4 text-xs uppercase tracking-[0.26em] text-slate-400">
-                    DNS Blueprint
-                  </div>
-                  <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>mail    CNAME   &lt;cloudflare-tunnel-host&gt;   proxied
-mx1     A       &lt;server-public-ip&gt;        dns-only
-@       MX      mx1.axione.xyz            priority 10
-@       TXT     v=spf1 mx -all
-_dmarc  TXT     v=DMARC1; p=none; adkim=s; aspf=s</code></pre>
-                </div>
-              </div>
-
-              <div id="env" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Environment</p>
-                <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">.env icinde dikkat etmen gereken alanlar</h2>
-                <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-[#0f172a] text-slate-100">
-                  <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>TEMPMAIL_DB_URL=sqlite:///./tempmail.db
-TEMPMAIL_WEB_HOST=0.0.0.0
-TEMPMAIL_WEB_PORT={{ web_port }}
-TEMPMAIL_SMTP_HOST=0.0.0.0
-TEMPMAIL_SMTP_PORT={{ smtp_port }}
-TEMPMAIL_ACCEPTED_DOMAINS={{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}
-TEMPMAIL_SESSION_HOURS=72
-TEMPMAIL_SECURE_COOKIES=false
-TEMPMAIL_ADMIN_USERNAME=admin
-TEMPMAIL_ADMIN_PASSWORD=change-me-now</code></pre>
-                </div>
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
-                  <div class="rounded-3xl bg-slate-50 p-5 text-sm leading-6 text-slate-600">
-                    <p class="font-semibold text-slate-900">Production notu</p>
-                    <p class="mt-2">HTTPS aktifse `TEMPMAIL_SECURE_COOKIES=true` yap. Varsayilan admin sifresini production'a tasima.</p>
-                  </div>
-                  <div class="rounded-3xl bg-slate-50 p-5 text-sm leading-6 text-slate-600">
-                    <p class="font-semibold text-slate-900">Mail notu</p>
-                    <p class="mt-2">Dis dunyadan mail alacaksan `TEMPMAIL_SMTP_PORT=25` neredeyse her zaman gerekli olur.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div id="secrets" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-                <p class="mono text-xs uppercase tracking-[0.24em] text-rose-700">Secrets</p>
-                <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Repoya asla cikmamasi gerekenler</h2>
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
-                  <div class="rounded-3xl border border-rose-200 bg-rose-50 p-5">
-                    <ul class="space-y-3 text-sm leading-6 text-rose-900">
-                      <li>.env dosyasi</li>
-                      <li>Admin sifresi</li>
-                      <li>Cloudflare tunnel credentials JSON</li>
-                      <li>Cloudflare API token varsa o</li>
-                      <li>Production DB dump dosyalari</li>
-                    </ul>
-                  </div>
-                  <div class="rounded-3xl bg-slate-50 p-5 text-sm leading-6 text-slate-600">
-                    Bu proje mail alma tarafinda key istemese bile operasyon tarafinda secret yonetimi onemli. En guvenlisi tum hassas verileri `.env` veya secret manager icinde tutmaktir.
-                  </div>
-                </div>
-              </div>
+          <div class="mt-8 grid gap-4 lg:grid-cols-4">
+            <div class="rounded-3xl bg-slate-50 p-5">
+              <p class="text-lg font-semibold text-slate-900">1. Kayit ol</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">UI uzerinden hesap ac. Sistemde admin onayi aciksa hesabin once onaylanir.</p>
+            </div>
+            <div class="rounded-3xl bg-slate-50 p-5">
+              <p class="text-lg font-semibold text-slate-900">2. Giris yap</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Giris sonrasi hesabina ait ana inbox ve ek inbox'lar yuklenir.</p>
+            </div>
+            <div class="rounded-3xl bg-slate-50 p-5">
+              <p class="text-lg font-semibold text-slate-900">3. Inbox olustur</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Temp inbox veya kisisel inbox talebi ac. Temp inbox'lar hizli test icin idealdir.</p>
+            </div>
+            <div class="rounded-3xl bg-slate-50 p-5">
+              <p class="text-lg font-semibold text-slate-900">4. Maili cek</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Liste, detay, verification link ve code alanlari ile dogrulama akisini bitir.</p>
             </div>
           </div>
         </section>
 
-        <section id="checklist" class="mx-auto mt-16 max-w-7xl rounded-[36px] bg-slate-950 p-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.22)] lg:p-10">
-          <div class="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p class="mono text-xs uppercase tracking-[0.24em] text-sky-300">Production Checklist</p>
-              <h2 class="mt-3 text-4xl font-bold tracking-[-0.04em] text-white">Canliya cikmadan once son kontrol</h2>
+        <section class="mx-auto mt-16 grid max-w-7xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:h-fit">
+            <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Contents</p>
+            <div class="mt-5 space-y-3 text-sm font-medium text-slate-700">
+              <a href="#product" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Urun ne saglar?</a>
+              <a href="#auth" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Kimlik dogrulama</a>
+              <a href="#api" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">API kullanim ornekleri</a>
+              <a href="#responses" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Response alanlari</a>
+              <a href="#limits" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Limitler ve davranis</a>
             </div>
-            <a href="/" class="rounded-full bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100">Inbox'a Don</a>
           </div>
 
-          <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-lg font-semibold">1. DNS hazir</p>
-              <p class="mt-2 text-sm leading-6 text-slate-300">`mail`, `mx1`, `MX`, `SPF`, `DMARC` kayitlari dogru.</p>
-            </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-lg font-semibold">2. SMTP erisimi var</p>
-              <p class="mt-2 text-sm leading-6 text-slate-300">Sunucuya disaridan `{{ smtp_port }}/tcp` erisilebiliyor.</p>
-            </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-lg font-semibold">3. App ayakta</p>
-              <p class="mt-2 text-sm leading-6 text-slate-300">FastAPI ve SMTP servisi systemd veya baska bir manager ile ayakta.</p>
-            </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-lg font-semibold">4. Secrets guvenli</p>
-              <p class="mt-2 text-sm leading-6 text-slate-300">Admin sifresi degistirilmis, secret dosyalari repoya cikmiyor.</p>
-            </div>
+          <div class="space-y-6">
+            <section id="product" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-sky-700">Product</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Axione Mail ile neler yapabilirsin?</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Signup testleri</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Kayit, email verification ve welcome mail akislarini yakalayabilirsin.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">OTP ve kod cekme</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">UI ve API response'larinda kodlar ayrica sunulur.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Verification link alma</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Mesajdan ayiklanan dogrulama linkini tek tikla acabilir veya API'den alabilirsin.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Inbox bazli test izolasyonu</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Her kullanici birden fazla inbox ile farkli test senaryolarini ayri yurutebilir.</p>
+                </div>
+              </div>
+            </section>
+
+            <section id="auth" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-emerald-700">Authentication</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Su anki access modeli</h2>
+              <div class="mt-6 grid gap-4 lg:grid-cols-2">
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Web kullanimi</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Standart register/login akisi ile cookie tabanli session acilir. Hesap panelinden API key de uretebilirsin.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">API key var mi?</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Evet. Kullanici hesabindan API key olusturabilir, tekrar kopyalayabilir ve istersen iptal edebilirsin. API hem `X-API-Key` hem `Authorization: Bearer` ile calisir.</p>
+                </div>
+              </div>
+
+              <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-[#0f172a] text-slate-100">
+                <div class="border-b border-white/10 px-5 py-4 text-xs uppercase tracking-[0.24em] text-slate-400">Auth Endpoints</div>
+                <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+GET  /api/auth/api-keys
+POST /api/auth/api-keys
+DELETE /api/auth/api-keys/{id}</code></pre>
+              </div>
+            </section>
+
+            <section id="api" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-orange-700">API</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Kullanici odakli API ornekleri</h2>
+
+              <div class="mt-6 space-y-6">
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">1. Login ol</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl -i -X POST https://mail.axione.xyz/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "demo-user",
+    "password": "demo-password"
+  }'</code></pre>
+                  </div>
+                  <p class="mt-3 text-sm leading-6 text-slate-600">Basarili login sonrasi response cookie set eder. Sonraki isteklerde ayni cookie ile devam edilir.</p>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">2. Inbox listeni cek</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/inboxes \
+  -H 'Cookie: tempmail_session=&lt;session-cookie&gt;'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">2b. API key ile ayni listeyi cek</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/inboxes \
+  -H 'X-API-Key: axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">3. Yeni temp inbox olustur</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl -X POST https://mail.axione.xyz/api/inboxes \
+  -H 'Content-Type: application/json' \
+  -H 'Cookie: tempmail_session=&lt;session-cookie&gt;' \
+  -d '{
+    "inbox_mode": "temp",
+    "domain": "{{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}"
+  }'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">4. Mesajlari listele</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl "https://mail.axione.xyz/api/inboxes/test@{{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}/messages" \
+  -H 'Cookie: tempmail_session=&lt;session-cookie&gt;'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">5. Tek mesaj detayini al</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/messages/123 \
+  -H 'Cookie: tempmail_session=&lt;session-cookie&gt;'</code></pre>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="responses" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Responses</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Mesaj response'larinda neler var?</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-sm font-semibold text-slate-900">Preview alanlari</p>
+                  <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                    <li>`id`</li>
+                    <li>`subject`</li>
+                    <li>`mail_from`</li>
+                    <li>`sender_domain`</li>
+                    <li>`received_at`</li>
+                    <li>`summary`</li>
+                    <li>`codes`</li>
+                    <li>`verification_link`</li>
+                  </ul>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-sm font-semibold text-slate-900">Detail alanlari</p>
+                  <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                    <li>`text_body`</li>
+                    <li>`html_body`</li>
+                    <li>`raw_headers`</li>
+                    <li>`message_category`</li>
+                    <li>`message_kind`</li>
+                    <li>`is_unread`</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-sky-700">Account Panel</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">API key'leri web uzerinden yonet</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-3">
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Olustur</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Avatar menusu altindan hesap panelini ac ve yeni key ismi girerek olustur.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Tekrar kopyala</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Olusan key listede saklanir; ihtiyac oldugunda tekrar tekrar kopyalayabilirsin.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Iptal et</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Artik kullanilmayan key'leri tek tikla revoke ederek entegrasyonu kapat.</p>
+                </div>
+              </div>
+            </section>
+
+            <section id="limits" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-rose-700">Limits</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Servis davranisi ve limitler</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Temp inbox limiti</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Standart kullanicilar gunluk belirli sayida temp inbox olusturabilir. Limit asilirsa `429` doner.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Inbox omru</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Temp inbox'lar suresi dolunca temizlenebilir. Kisisel inbox'lar onaya bagli olabilir ve daha kalici davranir.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Session zorunlu</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Inbox ve mesaj endpoint'lerinin tamami kullanici oturumu ister.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Health endpoint</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">`GET /healthz` acik saglik kontrolu icin kullanilabilir.</p>
+                </div>
+              </div>
+            </section>
           </div>
         </section>
       </main>

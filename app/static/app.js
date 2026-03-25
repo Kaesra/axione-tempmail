@@ -10,7 +10,9 @@ function mailDesk() {
     adminUsername: initial.adminUsername || 'admin',
     search: '',
     composeOpen: false,
+    accountOpen: false,
     composeError: '',
+    apiKeyError: '',
     notice: { text: '', type: 'success' },
     inboxes: [],
     messages: [],
@@ -21,15 +23,18 @@ function mailDesk() {
     poller: null,
     pendingUsers: [],
     pendingPersonalInboxes: [],
+    apiKeys: [],
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
+    apiKeyForm: { name: '' },
 
     async init() {
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
         await this.fetchInboxes()
+        await this.loadApiKeys()
         if (this.auth.user.is_admin) {
           await this.loadPendingUsers()
           await this.loadPendingPersonalInboxes()
@@ -95,6 +100,7 @@ function mailDesk() {
         this.ensureValidDomain()
         this.setNotice(`Hos geldin ${payload.user.username}`, 'success')
         await this.fetchInboxes()
+        await this.loadApiKeys()
         if (this.auth.user && this.auth.user.is_admin) await this.loadPendingUsers()
       } catch (error) {
         this.auth.error = error.message
@@ -107,10 +113,55 @@ function mailDesk() {
       this.auth.user = null
       this.inboxes = []
       this.messages = []
+      this.apiKeys = []
       this.selectedMessage = null
       this.selectedMessageDetail = null
       this.composeOpen = false
+      this.accountOpen = false
       this.setNotice('Cikis yapildi', 'success')
+    },
+
+    async loadApiKeys() {
+      if (!this.auth.user) return
+      this.apiKeys = await this.api('/api/auth/api-keys')
+    },
+
+    openAccount() {
+      if (!this.auth.user) return
+      this.accountOpen = true
+      this.apiKeyError = ''
+      this.loadApiKeys()
+    },
+
+    closeAccount() {
+      this.accountOpen = false
+      this.apiKeyError = ''
+      this.apiKeyForm.name = ''
+    },
+
+    async createApiKey() {
+      this.apiKeyError = ''
+      try {
+        const payload = await this.api('/api/auth/api-keys', { method: 'POST', body: JSON.stringify(this.apiKeyForm) })
+        this.apiKeyForm.name = ''
+        this.apiKeys = [payload.api_key, ...this.apiKeys]
+        this.setNotice('API key olusturuldu', 'success')
+      } catch (error) {
+        this.apiKeyError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async revokeApiKey(apiKeyId) {
+      try {
+        const updated = await this.api(`/api/auth/api-keys/${apiKeyId}`, { method: 'DELETE' })
+        const index = this.apiKeys.findIndex((item) => item.id === updated.id)
+        if (index >= 0) this.apiKeys[index] = updated
+        this.setNotice('API key iptal edildi', 'success')
+      } catch (error) {
+        this.apiKeyError = error.message
+        this.setNotice(error.message, 'error')
+      }
     },
 
     async loadPendingUsers() {
@@ -307,6 +358,11 @@ function mailDesk() {
       if (!inbox) return ''
       if (inbox.inbox_mode === 'personal') return inbox.is_approved ? 'Kisisel' : 'Kisisel Onay'
       return 'Temp 5 dk'
+    },
+
+    apiKeyMask(apiKey) {
+      if (!apiKey) return ''
+      return `${apiKey.prefix || 'axm'}...${apiKey.last_four || ''}`
     },
 
     setNotice(text, type = 'success') {

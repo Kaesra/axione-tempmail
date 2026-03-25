@@ -4,12 +4,12 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import Cookie, HTTPException
+from fastapi import Cookie, HTTPException, Request
 from sqlalchemy import delete, select
 
 from app.config import settings
 from app.database import SessionLocal
-from app.models import AuthSession, User
+from app.models import ApiKey, AuthSession, User
 
 
 SESSION_COOKIE = "tempmail_session"
@@ -107,6 +107,19 @@ def _public_user(user: User) -> dict:
     }
 
 
+def _public_api_key(api_key: ApiKey) -> dict:
+    return {
+        "id": api_key.id,
+        "name": api_key.name,
+        "prefix": api_key.prefix,
+        "last_four": api_key.last_four,
+        "created_at": api_key.created_at,
+        "last_used_at": api_key.last_used_at,
+        "revoked_at": api_key.revoked_at,
+        "token": api_key.token,
+    }
+
+
 def get_user_by_session(token: str | None) -> dict | None:
     if not token:
         return None
@@ -124,8 +137,35 @@ def get_user_by_session(token: str | None) -> dict | None:
         return _public_user(user)
 
 
-def require_user(tempmail_session: str | None = Cookie(default=None)) -> dict:
+def _extract_api_key(request: Request) -> str | None:
+    direct = request.headers.get("x-api-key")
+    if direct:
+        return direct.strip()
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        return authorization[7:].strip()
+    return None
+
+
+def get_user_by_api_key(token: str | None) -> dict | None:
+    if not token:
+        return None
+    with SessionLocal() as session:
+        api_key = session.scalar(select(ApiKey).where(ApiKey.token == token, ApiKey.revoked_at.is_(None)))
+        if api_key is None:
+            return None
+        user = session.scalar(select(User).where(User.username == api_key.username))
+        if user is None:
+            return None
+        api_key.last_used_at = datetime.utcnow()
+        session.commit()
+        return _public_user(user)
+
+
+def require_user(request: Request, tempmail_session: str | None = Cookie(default=None)) -> dict:
     user = get_user_by_session(tempmail_session)
+    if user is None:
+        user = get_user_by_api_key(_extract_api_key(request))
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication required")
     if not user["is_approved"]:
@@ -133,11 +173,48 @@ def require_user(tempmail_session: str | None = Cookie(default=None)) -> dict:
     return user
 
 
-def require_admin(tempmail_session: str | None = Cookie(default=None)) -> dict:
-    user = require_user(tempmail_session)
+def require_admin(request: Request, tempmail_session: str | None = Cookie(default=None)) -> dict:
+    user = require_user(request, tempmail_session)
     if not user["is_admin"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+def list_api_keys(username: str) -> list[dict]:
+    with SessionLocal() as session:
+        keys = session.scalars(select(ApiKey).where(ApiKey.username == username).order_by(ApiKey.created_at.desc())).all()
+        return [_public_api_key(item) for item in keys]
+
+
+def create_api_key(username: str, name: str) -> dict:
+    normalized_name = name.strip()
+    if not normalized_name:
+        raise ValueError("API key name is required")
+    token = f"axm_{secrets.token_urlsafe(24)}"
+    with SessionLocal() as session:
+        api_key = ApiKey(
+            username=username,
+            name=normalized_name[:120],
+            token=token,
+            prefix=token[:7],
+            last_four=token[-4:],
+        )
+        session.add(api_key)
+        session.commit()
+        session.refresh(api_key)
+        return _public_api_key(api_key)
+
+
+def revoke_api_key(username: str, api_key_id: int) -> dict | None:
+    with SessionLocal() as session:
+        api_key = session.scalar(select(ApiKey).where(ApiKey.id == api_key_id, ApiKey.username == username))
+        if api_key is None:
+            return None
+        if api_key.revoked_at is None:
+            api_key.revoked_at = datetime.utcnow()
+            session.commit()
+            session.refresh(api_key)
+        return _public_api_key(api_key)
 
 
 def list_pending_users() -> list[dict]:

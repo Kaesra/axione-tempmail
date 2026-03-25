@@ -100,6 +100,26 @@ class AuthMessageResponse(BaseModel):
     user: UserResponse | None = None
 
 
+class ApiKeyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class ApiKeyResponse(BaseModel):
+    id: int
+    name: str
+    prefix: str
+    last_four: str
+    created_at: datetime
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+    token: str
+
+
+class ApiKeyCreateResponse(BaseModel):
+    api_key: ApiKeyResponse
+    message: str
+
+
 class PersonalInboxApproval(BaseModel):
     id: int
     address: str

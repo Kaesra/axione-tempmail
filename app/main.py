@@ -12,12 +12,15 @@ from sqlalchemy import select
 from app.auth_service import (
     SESSION_COOKIE,
     approve_user,
+    create_api_key,
     ensure_bootstrap_admin,
     get_user_by_session,
     list_pending_users,
+    list_api_keys,
     login_user,
     logout_session,
     register_user,
+    revoke_api_key,
     require_admin,
     require_user,
 )
@@ -42,7 +45,7 @@ from app.mail_service import (
     temp_inbox_creations_today,
 )
 from app.models import Inbox
-from app.schemas import AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
+from app.schemas import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -155,6 +158,28 @@ async def auth_logout(request: Request, response: Response) -> AuthMessageRespon
 async def auth_me(request: Request) -> AuthStatusResponse:
     user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
     return AuthStatusResponse(user=UserResponse(**user) if user else None)
+
+
+@app.get("/api/auth/api-keys", response_model=list[ApiKeyResponse])
+async def auth_api_keys(user: dict = Depends(require_user)) -> list[ApiKeyResponse]:
+    return [ApiKeyResponse(**item) for item in list_api_keys(user["username"])]
+
+
+@app.post("/api/auth/api-keys", response_model=ApiKeyCreateResponse)
+async def auth_create_api_key(payload: ApiKeyCreate, user: dict = Depends(require_user)) -> ApiKeyCreateResponse:
+    try:
+        api_key = create_api_key(user["username"], payload.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ApiKeyCreateResponse(api_key=ApiKeyResponse(**api_key), message="API key created")
+
+
+@app.delete("/api/auth/api-keys/{api_key_id}", response_model=ApiKeyResponse)
+async def auth_revoke_api_key(api_key_id: int, user: dict = Depends(require_user)) -> ApiKeyResponse:
+    api_key = revoke_api_key(user["username"], api_key_id)
+    if api_key is None:
+        raise HTTPException(status_code=404, detail="API key not found")
+    return ApiKeyResponse(**api_key)
 
 
 @app.get("/api/admin/users", response_model=list[UserResponse])
