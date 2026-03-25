@@ -21,7 +21,7 @@ function mailDesk() {
     poller: null,
     pendingUsers: [],
     pendingPersonalInboxes: [],
-    filter: { mode: 'primary' },
+    filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
 
@@ -239,6 +239,7 @@ function mailDesk() {
 
     filteredMessages() {
       let items = this.messages
+      if (this.filter.mode === 'all') items = items
       if (this.filter.mode === 'social') items = items.filter((m) => m.message_category === 'social')
       if (this.filter.mode === 'spam') items = items.filter((m) => m.message_category === 'spam')
       if (this.filter.mode === 'updates') items = items.filter((m) => m.message_category === 'updates')
