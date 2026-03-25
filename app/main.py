@@ -108,6 +108,21 @@ async def index(request: Request):
     )
 
 
+@app.get("/guide", response_class=HTMLResponse)
+async def guide(request: Request):
+    current_user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    return templates.TemplateResponse(
+        request,
+        "docs.html",
+        {
+            "current_user": template_user_payload(current_user),
+            "accepted_domains": settings.accepted_domains,
+            "smtp_port": settings.smtp_port,
+            "web_port": settings.web_port,
+        },
+    )
+
+
 @app.post("/api/auth/register", response_model=AuthMessageResponse)
 async def auth_register(payload: AuthRequest) -> AuthMessageResponse:
     try:
