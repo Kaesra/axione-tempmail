@@ -1,0 +1,57 @@
+<div x-show="composeOpen && auth.user" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/20"></div>
+<section x-show="composeOpen && auth.user" x-transition class="fixed bottom-0 right-4 z-50 w-[min(540px,calc(100vw-24px))] overflow-hidden rounded-t-2xl bg-white shadow-[0_24px_80px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+  <div class="flex items-center justify-between bg-[#f2f6fc] px-4 py-3">
+    <div>
+      <p class="text-sm font-medium text-slate-800">Yeni Inbox Olustur</p>
+      <p class="mt-1 text-xs text-slate-500">Domain secimi artik ayri ve net bir alan.</p>
+    </div>
+    <button @click="composeOpen = false" class="rounded-full p-2 text-slate-500 hover:bg-white">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="space-y-4 px-4 py-4">
+    <div x-show="composeError" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="composeError"></div>
+    <div>
+      <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Profil Adi</label>
+      <input x-model="form.profileName" type="text" placeholder="ornek: TikTok Profilim" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+    </div>
+    <div>
+      <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Local Part</label>
+      <input x-model="form.localPart" type="text" placeholder="ornek: berkay veya bos birak" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+    </div>
+
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <label class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Domain</label>
+        <span class="mono text-[11px] text-slate-500" x-text="`Secili: @${form.domain || acceptedDomains[0] || 'axione.xyz'}`"></span>
+      </div>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <template x-for="domain in acceptedDomains" :key="domain">
+          <button @click="form.domain = domain" type="button" :class="form.domain === domain ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'" class="flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-medium">
+            <span x-text="`@${domain}`"></span>
+            <svg x-show="form.domain === domain" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="m5 13 4 4L19 7"/></svg>
+          </button>
+        </template>
+      </div>
+      <select x-model="form.domain" class="mt-3 w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        <template x-for="domain in acceptedDomains" :key="`select-${domain}`">
+          <option :value="domain" x-text="domain"></option>
+        </template>
+      </select>
+    </div>
+
+    <label class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+      <input x-model="form.isPersistent" type="checkbox" class="rounded border-slate-300 text-[#1a73e8] focus:ring-[#1a73e8]">
+      Kalici inbox olarak sakla
+    </label>
+
+    <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <span class="font-medium text-slate-800">Olusacak adres:</span>
+      <span class="mono ml-2" x-text="previewInboxAddress()"></span>
+    </div>
+  </div>
+  <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-4 py-4">
+    <button @click="composeOpen = false" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Iptal</button>
+    <button @click="createInbox()" class="rounded-full bg-[#0b57d0] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0842a0]">Olustur</button>
+  </div>
+</section>
