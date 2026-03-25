@@ -42,11 +42,19 @@
           </div>
 
           <div class="ml-auto flex items-center gap-2">
+            <button x-show="auth.user" @click="composeOpen = true" class="rounded-full bg-[#c2e7ff] px-4 py-2 text-sm font-medium text-slate-800 lg:hidden">Olustur</button>
             <button class="hidden rounded-full bg-[#c2e7ff] px-6 py-3 text-sm font-medium text-slate-800 lg:block">Yukselt</button>
             <div class="grid h-10 w-10 place-items-center rounded-full bg-[#0b5] text-white" x-text="auth.user ? auth.user.username.slice(0, 1).toUpperCase() : 'A'"></div>
           </div>
         </div>
       </header>
+
+      <div x-show="notice.text" x-transition class="mx-3 mt-3 rounded-2xl border px-4 py-3 text-sm shadow-sm lg:mx-4" :class="notice.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+        <div class="flex items-center justify-between gap-3">
+          <span x-text="notice.text"></span>
+          <button @click="clearNotice()" class="rounded-full px-2 py-1 text-xs font-medium">Kapat</button>
+        </div>
+      </div>
 
       <div class="flex min-h-[calc(100vh-73px)] gap-4 px-2 pb-4 pt-3 lg:px-4">
         <aside class="hidden w-[256px] shrink-0 lg:block">
@@ -117,6 +125,7 @@
                   <div>
                     <p class="text-lg font-medium text-slate-700">Mesaj yok</p>
                     <p class="mt-2 text-sm">Inbox sec, filtreyi degistir veya yeni mail bekle.</p>
+                    <button @click="composeOpen = true" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
                   </div>
                 </div>
               </template>
@@ -212,6 +221,7 @@
           </button>
         </div>
         <div class="space-y-4 px-4 py-4">
+          <div x-show="composeError" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="composeError"></div>
           <div>
             <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Local Part</label>
             <input x-model="form.localPart" type="text" placeholder="ornek: berkay veya bos birak" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
@@ -247,9 +257,9 @@
             <span class="mono ml-2" x-text="previewInboxAddress()"></span>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-4 py-4">
-          <button @click="composeOpen = false" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Iptal</button>
-          <button @click="createInbox()" class="rounded-full bg-[#0b57d0] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0842a0]">Olustur</button>
+          <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-4 py-4">
+            <button @click="composeOpen = false" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Iptal</button>
+            <button @click="createInbox()" class="rounded-full bg-[#0b57d0] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0842a0]">Olustur</button>
         </div>
       </section>
 
@@ -285,6 +295,8 @@
           currentUser,
           search: '',
           composeOpen: false,
+          composeError: '',
+          notice: { text: '', type: 'success' },
           inboxes: [], messages: [], activeInbox: null, selectedMessage: null, selectedMessageDetail: null, poller: null,
           pendingUsers: [],
           filter: { mode: 'all' },
@@ -314,6 +326,7 @@
               } catch {
                 message = await response.text() || message;
               }
+              if (response.status === 401) this.auth.user = null;
               throw new Error(message);
             }
             if (response.status === 204) return null;
@@ -330,9 +343,11 @@
             try {
               const payload = await this.api('/api/auth/register', { method: 'POST', body: JSON.stringify(this.auth.form) });
               this.auth.message = payload.message;
+              this.setNotice(payload.message, 'success');
               this.auth.mode = 'login';
             } catch (error) {
               this.auth.error = error.message;
+              this.setNotice(error.message, 'error');
             }
           },
           async login() {
@@ -343,10 +358,12 @@
               this.auth.user = payload.user;
               this.auth.form.password = '';
               this.ensureValidDomain();
+              this.setNotice(`Hos geldin ${payload.user.username}`, 'success');
               await this.fetchInboxes();
               if (this.auth.user && this.auth.user.is_admin) await this.loadPendingUsers();
             } catch (error) {
               this.auth.error = error.message;
+              this.setNotice(error.message, 'error');
             }
           },
           async logout() {
@@ -357,6 +374,7 @@
             this.selectedMessage = null;
             this.selectedMessageDetail = null;
             this.composeOpen = false;
+            this.setNotice('Cikis yapildi', 'success');
           },
           async loadPendingUsers() {
             if (!this.auth.user || !this.auth.user.is_admin) return;
@@ -364,6 +382,7 @@
           },
           async approveUser(userId) {
             await this.api(`/api/admin/users/${userId}/approve`, { method: 'POST' });
+            this.setNotice('Kullanici onaylandi', 'success');
             await this.loadPendingUsers();
           },
           async fetchInboxes() {
@@ -377,14 +396,17 @@
           },
           async createInbox() {
             this.ensureValidDomain();
+            this.composeError = '';
             try {
               const inbox = await this.api('/api/inboxes', { method: 'POST', body: JSON.stringify({ local_part: this.form.localPart || null, domain: this.form.domain || null, is_persistent: this.form.isPersistent }) });
               this.form.localPart = '';
               this.composeOpen = false;
+              this.setNotice(`Inbox olusturuldu: ${inbox.address}`, 'success');
               await this.fetchInboxes();
               await this.selectInbox(inbox.address);
             } catch (error) {
-              this.auth.error = error.message;
+              this.composeError = error.message;
+              this.setNotice(error.message, 'error');
             }
           },
           async selectInbox(address) {
@@ -446,6 +468,12 @@
             const local = this.form.localPart?.trim() || 'otomatik-uretilecek';
             const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz';
             return `${local}@${domain}`;
+          },
+          setNotice(text, type = 'success') {
+            this.notice = { text, type };
+          },
+          clearNotice() {
+            this.notice = { text: '', type: 'success' };
           },
         }
       }
