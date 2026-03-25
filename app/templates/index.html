@@ -19,22 +19,28 @@
   </head>
   <body class="min-h-screen bg-slate-100 text-slate-900">
     <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_24%),linear-gradient(180deg,_#f8fafc,_#e2e8f0)]"></div>
-    <main x-data="mailDesk({ acceptedDomains: {{ accepted_domains|tojson }}, pollSeconds: {{ poll_seconds }} })" x-init="init()" class="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-4 p-3 lg:p-5">
+    <main x-data="mailDesk({ acceptedDomains: {{ accepted_domains|tojson }}, pollSeconds: {{ poll_seconds }}, currentUser: {{ current_user|tojson }} })" x-init="init()" class="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-4 p-3 lg:p-5">
       <header class="glass flex flex-col gap-4 rounded-[28px] border border-white/60 bg-white/80 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div>
           <p class="mono text-xs uppercase tracking-[0.35em] text-sky-600">Axione Mail Desk</p>
-          <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Dogrulama mailleri icin hizlandirilmis inbox masasi.</h1>
-          <p class="mt-2 max-w-3xl text-sm text-slate-600 lg:text-base">OTP, verify link, password reset ve login maillerini otomatik ayiklar; okunmamis takibi, hizli kopyalama ve kalici inbox yonetimi tek panelde calisir.</p>
+          <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Onayli kullanici ve verify odakli temp mail paneli.</h1>
+          <p class="mt-2 max-w-3xl text-sm text-slate-600 lg:text-base">Kayitlar admin onayi bekler. Verify code, magic link ve HTML mailler otomatik ayiklanir; ekip icin guvenli inbox erisimi saglanir.</p>
         </div>
         <div class="grid gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white sm:grid-cols-4">
           <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Poll</p><p class="mt-1 text-lg font-semibold" x-text="`${pollSeconds}s`"></p></div>
           <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Inbox</p><p class="mt-1 text-lg font-semibold" x-text="inboxes.length"></p></div>
           <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Okunmamis</p><p class="mt-1 text-lg font-semibold text-amber-300" x-text="totalUnread()"></p></div>
-          <div><p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Dogrulama</p><p class="mt-1 text-lg font-semibold text-emerald-300" x-text="totalVerification()"></p></div>
+          <div>
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Kullanici</p>
+            <div class="mt-1 flex items-center gap-2">
+              <p class="truncate text-sm font-semibold text-emerald-300" x-text="auth.user ? auth.user.username : 'Giris yok'"></p>
+              <button x-show="auth.user" @click="logout()" class="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">Cikis</button>
+            </div>
+          </div>
         </div>
       </header>
 
-      <section class="grid min-h-[calc(100vh-190px)] gap-4 lg:grid-cols-[320px_minmax(360px,460px)_minmax(0,1fr)]">
+      <section class="grid min-h-[calc(100vh-190px)] gap-4 lg:grid-cols-[320px_minmax(360px,460px)_minmax(0,1fr)]" :class="!auth.user ? 'pointer-events-none select-none opacity-40' : ''">
         <aside class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/82 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
           <div class="rounded-[24px] bg-sky-50 p-4 shadow-inner shadow-sky-100">
             <div class="grid gap-3">
@@ -44,6 +50,28 @@
               </select>
               <label class="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700"><input x-model="form.isPersistent" type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">Kalici inbox olarak isaretle</label>
               <button @click="createInbox()" class="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Yeni Inbox Olustur</button>
+            </div>
+          </div>
+
+          <div x-show="auth.user && auth.user.is_admin" class="mt-4 rounded-[24px] border border-amber-200 bg-amber-50 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="mono text-[11px] uppercase tracking-[0.25em] text-amber-700">Admin Onayi</p>
+                <p class="text-sm text-amber-900">Bekleyen kayitlar</p>
+              </div>
+              <button @click="loadPendingUsers()" class="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700">Yenile</button>
+            </div>
+            <div class="mt-3 space-y-2">
+              <template x-if="!pendingUsers.length"><div class="rounded-2xl bg-white px-3 py-3 text-xs text-slate-500">Bekleyen kayit yok.</div></template>
+              <template x-for="user in pendingUsers" :key="user.id">
+                <div class="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-3">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-900" x-text="user.username"></p>
+                    <p class="text-xs text-slate-500" x-text="formatDate(user.created_at)"></p>
+                  </div>
+                  <button @click="approveUser(user.id)" class="rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Onayla</button>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -59,7 +87,7 @@
           <div class="mt-4 flex items-center justify-between">
             <div>
               <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Inbox'lar</p>
-              <p class="text-sm text-slate-500">Kalicilar ve veri yogun kutular ustte kalir</p>
+              <p class="text-sm text-slate-500">Kalicilar ve verify yogun kutular</p>
             </div>
             <button @click="fetchInboxes()" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-sky-300 hover:text-sky-700">Yenile</button>
           </div>
@@ -107,16 +135,13 @@
               <div class="flex items-center justify-between gap-3">
                 <div>
                   <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Verify Hizi</p>
-                  <p class="mt-1 text-sm text-slate-300">Son mesajlardan dogrulama odakli olanlar.</p>
+                  <p class="mt-1 text-sm text-slate-300">Kod veya link gelen mailleri one cikarir.</p>
                 </div>
                 <span class="mono rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-emerald-300" x-text="`${verificationMessages().length} odak`"></span>
               </div>
               <div class="mt-3 flex flex-wrap gap-2">
                 <template x-for="message in verificationMessages().slice(0, 3)" :key="message.id">
-                  <button @click="loadMessage(message.id)" class="rounded-full bg-white/10 px-3 py-2 text-left text-xs text-white transition hover:bg-white/20">
-                    <span class="font-semibold" x-text="message.codes[0] || message.sender_domain || 'verify'"></span>
-                    <span class="ml-2 text-slate-300" x-text="labelForKind(message.message_kind)"></span>
-                  </button>
+                  <button @click="loadMessage(message.id)" class="rounded-full bg-white/10 px-3 py-2 text-left text-xs text-white transition hover:bg-white/20"><span class="font-semibold" x-text="message.codes[0] || message.sender_domain || 'verify'"></span><span class="ml-2 text-slate-300" x-text="labelForKind(message.message_kind)"></span></button>
                 </template>
               </div>
             </div>
@@ -174,7 +199,7 @@
               <div class="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
                 <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Kaynak</p>
                 <p class="mt-2 break-all text-sm font-semibold text-slate-900" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
-                <p class="mt-3 text-xs text-slate-500">Gonderici domainine gore servis tespiti daha hizli olur.</p>
+                <p class="mt-3 text-xs text-slate-500">HTML maillerde text body olmasa bile govde text'e cevrilir.</p>
               </div>
             </div>
           </div>
@@ -186,42 +211,118 @@
                   <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Mesaj Govdesi</p>
                   <pre class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700" x-text="selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi'"></pre>
                 </div>
-                <template x-if="selectedMessageDetail.verification_link">
-                  <div class="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4">
-                    <p class="mono text-[11px] uppercase tracking-[0.25em] text-emerald-700">Dogrulama Linki</p>
-                    <p class="mt-3 break-all text-sm text-emerald-900" x-text="selectedMessageDetail.verification_link"></p>
-                  </div>
-                </template>
-                <details class="rounded-[24px] border border-slate-200 bg-white px-4 py-4">
-                  <summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw Headers</summary>
-                  <pre class="mono mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-500" x-text="selectedMessageDetail.raw_headers"></pre>
-                </details>
+                <template x-if="selectedMessageDetail.verification_link"><div class="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4"><p class="mono text-[11px] uppercase tracking-[0.25em] text-emerald-700">Dogrulama Linki</p><p class="mt-3 break-all text-sm text-emerald-900" x-text="selectedMessageDetail.verification_link"></p></div></template>
+                <details class="rounded-[24px] border border-slate-200 bg-white px-4 py-4"><summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw Headers</summary><pre class="mono mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-500" x-text="selectedMessageDetail.raw_headers"></pre></details>
               </div>
             </template>
             <template x-if="!selectedMessageDetail"><div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Soldan bir inbox, ortadan bir mesaj sec.</div></template>
           </div>
         </section>
       </section>
+
+      <section x-show="!auth.user" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4">
+        <div class="w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/20 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.35)] lg:grid lg:grid-cols-[1.1fr_0.9fr]">
+          <div class="bg-slate-950 px-6 py-8 text-white lg:px-8">
+            <p class="mono text-xs uppercase tracking-[0.35em] text-sky-300">Restricted Access</p>
+            <h2 class="mt-4 text-3xl font-extrabold tracking-tight">Kayit ol, admin onaylasin, sonra inbox'lara eris.</h2>
+            <p class="mt-4 text-sm text-slate-300">Bu panelde herkes otomatik iceri giremez. Kayitlar admin onayi bekler. Onaylandiginda ayni hesapla giris yapip maillere ulasirsin.</p>
+            <div class="mt-6 rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
+              <p class="font-semibold text-white">Varsayilan admin</p>
+              <p class="mt-2">Kullanim sonrasi `.env` icindeki `TEMPMAIL_ADMIN_PASSWORD` degerini degistirmen iyi olur.</p>
+            </div>
+          </div>
+          <div class="px-6 py-8 lg:px-8">
+            <div class="flex gap-2 rounded-full bg-slate-100 p-1 text-sm font-semibold">
+              <button @click="auth.mode = 'login'" :class="auth.mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Giris</button>
+              <button @click="auth.mode = 'register'" :class="auth.mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Kayit Ol</button>
+            </div>
+            <div class="mt-6 space-y-4">
+              <input x-model="auth.form.username" type="text" placeholder="kullanici adi" class="rounded-2xl border-slate-200 text-sm focus:border-sky-400 focus:ring-sky-400">
+              <input x-model="auth.form.password" type="password" placeholder="sifre" class="rounded-2xl border-slate-200 text-sm focus:border-sky-400 focus:ring-sky-400">
+              <button @click="auth.mode === 'login' ? login() : register()" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" x-text="auth.mode === 'login' ? 'Giris Yap' : 'Kayit Ol' "></button>
+            </div>
+            <div class="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <p x-text="auth.mode === 'login' ? 'Onayli kullanicilar giris yapabilir.' : 'Kayit olduktan sonra admin panelinden onay beklenir.'"></p>
+            </div>
+            <p x-show="auth.message" class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700" x-text="auth.message"></p>
+            <p x-show="auth.error" class="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="auth.error"></p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script>
-      function mailDesk({ acceptedDomains, pollSeconds }) {
+      function mailDesk({ acceptedDomains, pollSeconds, currentUser }) {
         return {
           acceptedDomains,
           pollSeconds,
           inboxes: [], messages: [], activeInbox: null, selectedMessage: null, selectedMessageDetail: null, poller: null,
+          pendingUsers: [],
           filter: { mode: 'all' },
+          auth: { user: currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
           form: { localPart: '', domain: acceptedDomains[0] || 'axione.xyz', isPersistent: false },
 
-          async init() { await this.fetchInboxes(); this.startPolling(); },
+          async init() {
+            await this.loadMe();
+            if (this.auth.user) {
+              await this.fetchInboxes();
+              if (this.auth.user.is_admin) await this.loadPendingUsers();
+            }
+            this.startPolling();
+          },
           async api(url, options = {}) {
             const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
-            if (!response.ok) { const payload = await response.text(); throw new Error(payload || 'Istek basarisiz'); }
+            if (!response.ok) {
+              let message = 'Istek basarisiz';
+              try {
+                const payload = await response.json();
+                message = payload.detail || payload.message || message;
+              } catch {
+                message = await response.text() || message;
+              }
+              throw new Error(message);
+            }
             if (response.status === 204) return null;
             const contentType = response.headers.get('content-type') || '';
             return contentType.includes('application/json') ? response.json() : response.text();
           },
+          async loadMe() {
+            const payload = await this.api('/api/auth/me');
+            this.auth.user = payload.user;
+          },
+          async register() {
+            this.auth.error = '';
+            const payload = await this.api('/api/auth/register', { method: 'POST', body: JSON.stringify(this.auth.form) });
+            this.auth.message = payload.message;
+            this.auth.mode = 'login';
+          },
+          async login() {
+            this.auth.error = '';
+            const payload = await this.api('/api/auth/login', { method: 'POST', body: JSON.stringify(this.auth.form) });
+            this.auth.user = payload.user;
+            this.auth.message = '';
+            this.auth.form.password = '';
+            await this.fetchInboxes();
+            if (this.auth.user && this.auth.user.is_admin) await this.loadPendingUsers();
+          },
+          async logout() {
+            await this.api('/api/auth/logout', { method: 'POST' });
+            this.auth.user = null;
+            this.inboxes = [];
+            this.messages = [];
+            this.selectedMessage = null;
+            this.selectedMessageDetail = null;
+          },
+          async loadPendingUsers() {
+            if (!this.auth.user || !this.auth.user.is_admin) return;
+            this.pendingUsers = await this.api('/api/admin/users');
+          },
+          async approveUser(userId) {
+            await this.api(`/api/admin/users/${userId}/approve`, { method: 'POST' });
+            await this.loadPendingUsers();
+          },
           async fetchInboxes() {
+            if (!this.auth.user) return;
             this.inboxes = await this.api('/api/inboxes');
             if (!this.activeInbox && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address);
             else if (this.activeInbox) {
@@ -240,7 +341,7 @@
             await this.refreshMessages();
           },
           async refreshMessages() {
-            if (!this.activeInbox) return;
+            if (!this.activeInbox || !this.auth.user) return;
             this.messages = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`);
             await this.fetchInboxes();
             if (!this.messages.length) { this.selectedMessage = null; this.selectedMessageDetail = null; return; }
@@ -279,14 +380,11 @@
           verificationMessages() { return this.messages.filter((m) => ['verification', 'password_reset', 'login_link', 'code'].includes(m.message_kind)); },
           totalUnread() { return this.inboxes.reduce((sum, inbox) => sum + (inbox.unread_count || 0), 0); },
           totalVerification() { return this.inboxes.reduce((sum, inbox) => sum + (inbox.verification_count || 0), 0); },
-          startPolling() { clearInterval(this.poller); this.poller = setInterval(() => { if (this.activeInbox) this.refreshMessages(); }, this.pollSeconds * 1000); },
+          startPolling() { clearInterval(this.poller); this.poller = setInterval(() => { if (this.activeInbox && this.auth.user) this.refreshMessages(); if (this.auth.user && this.auth.user.is_admin) this.loadPendingUsers(); }, this.pollSeconds * 1000); },
           copyText(value) { navigator.clipboard.writeText(value); },
           openLink(value) { window.open(value, '_blank', 'noopener,noreferrer'); },
           formatDate(value) { if (!value) return '-'; return new Date(value).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); },
-          labelForKind(kind) {
-            const map = { general: 'Genel', verification: 'Verify', password_reset: 'Reset', login_link: 'Magic Link', code: 'Kod' };
-            return map[kind] || kind;
-          },
+          labelForKind(kind) { const map = { general: 'Genel', verification: 'Verify', password_reset: 'Reset', login_link: 'Magic Link', code: 'Kod' }; return map[kind] || kind; },
         }
       }
     </script>
