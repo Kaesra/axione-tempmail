@@ -72,6 +72,10 @@ PY
 - `GET /api/config`
 - `GET /healthz`
 
+## Ek dokumantasyon
+
+- API key / servis ihtiyaclari: `docs/API_KEYS_AND_SERVICES.md`
+
 ## axione.xyz icin hedef kurulum
 
 - Mail adresleri: `anything@axione.xyz`
