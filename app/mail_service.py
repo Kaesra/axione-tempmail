@@ -37,31 +37,66 @@ def _message_payload(message: Message) -> dict:
     }
 
 
+def sanitize_local_part(value: str) -> str:
+    cleaned = "".join(ch for ch in value.strip().lower() if ch.isalnum() or ch in {"-", ".", "_"})
+    return cleaned.strip("-._")[:64]
+
+
+def sanitize_ip_label(ip_address: str) -> str:
+    return sanitize_local_part(ip_address.replace(":", "-").replace(".", "-")) or "unknown-ip"
+
+
 def is_domain_allowed(domain: str) -> bool:
     if settings.allow_any_domain:
         return True
     return domain.lower() in settings.accepted_domains
 
 
-def ensure_inbox(address: str) -> Inbox:
+def ensure_inbox(
+    address: str,
+    owner_username: str = "",
+    is_persistent: bool = False,
+    profile_name: str = "Inbox",
+    profile_type: str = "manual",
+    source_ip: str = "",
+) -> Inbox:
     normalized = normalize_address(address)
+    local_part, domain = split_address(normalized)
     with SessionLocal() as session:
         inbox_count = session.scalar(select(func.count()).select_from(Inbox)) or 0
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
+        local_conflict = session.scalar(select(Inbox).where(Inbox.local_part == local_part))
+        if local_conflict is not None and local_conflict.address != normalized:
+            raise ValueError("This inbox name is already reserved")
         if inbox is None:
             if inbox_count >= settings.max_inboxes:
                 raise ValueError("Inbox limit reached")
-            inbox = Inbox(address=normalized)
+            inbox = Inbox(
+                local_part=local_part,
+                domain=domain,
+                address=normalized,
+                owner_username=owner_username,
+                profile_name=profile_name,
+                profile_type=profile_type,
+                source_ip=source_ip,
+                is_persistent=is_persistent,
+            )
             session.add(inbox)
+            session.commit()
+            session.refresh(inbox)
+        elif owner_username and inbox.owner_username and inbox.owner_username != owner_username:
+            raise ValueError("This inbox belongs to another user")
+        elif owner_username and not inbox.owner_username:
+            inbox.owner_username = owner_username
             session.commit()
             session.refresh(inbox)
         return inbox
 
 
-def set_inbox_persistent(address: str, is_persistent: bool) -> Inbox | None:
+def set_inbox_persistent(address: str, owner_username: str, is_persistent: bool) -> Inbox | None:
     normalized = normalize_address(address)
     with SessionLocal() as session:
-        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
+        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == owner_username))
         if inbox is None:
             return None
         inbox.is_persistent = is_persistent
@@ -70,9 +105,44 @@ def set_inbox_persistent(address: str, is_persistent: bool) -> Inbox | None:
         return inbox
 
 
-def list_inboxes() -> list[dict]:
+def ensure_default_inboxes(owner_username: str, client_ip: str, domain: str) -> None:
+    personal_local = sanitize_local_part(owner_username)
+    try:
+        ensure_inbox(
+            f"{personal_local}@{domain}",
+            owner_username=owner_username,
+            is_persistent=True,
+            profile_name="Kisisel Profil",
+            profile_type="personal",
+            source_ip=client_ip,
+        )
+    except ValueError:
+        ensure_inbox(
+            f"{personal_local}-profile@{domain}",
+            owner_username=owner_username,
+            is_persistent=True,
+            profile_name="Kisisel Profil",
+            profile_type="personal",
+            source_ip=client_ip,
+        )
+    ip_address = f"ip-{sanitize_ip_label(client_ip)}-{sanitize_local_part(owner_username)[:12]}@{domain}"
+    ensure_inbox(
+        ip_address,
+        owner_username=owner_username,
+        is_persistent=True,
+        profile_name=f"IP Profil {client_ip}",
+        profile_type="ip",
+        source_ip=client_ip,
+    )
+
+
+def list_inboxes(owner_username: str) -> list[dict]:
     with SessionLocal() as session:
-        inboxes = session.scalars(select(Inbox).order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))).all()
+        inboxes = session.scalars(
+            select(Inbox)
+            .where(Inbox.owner_username == owner_username)
+            .order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))
+        ).all()
         result: list[dict] = []
         for inbox in inboxes:
             latest_message = session.scalar(
@@ -92,7 +162,11 @@ def list_inboxes() -> list[dict]:
             ) or 0
             result.append(
                 {
+                    "local_part": inbox.local_part,
+                    "domain": inbox.domain,
                     "address": inbox.address,
+                    "profile_name": inbox.profile_name,
+                    "profile_type": inbox.profile_type,
                     "is_persistent": inbox.is_persistent,
                     "created_at": inbox.created_at,
                     "message_count": message_count,
@@ -213,19 +287,25 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
         session.commit()
 
 
-def list_messages(address: str) -> list[dict]:
+def list_messages(owner_username: str, address: str) -> list[dict]:
     normalized = normalize_address(address)
     with SessionLocal() as session:
+        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == owner_username))
+        if inbox is None:
+            return []
         messages = session.scalars(
             select(Message).where(Message.inbox_address == normalized).order_by(desc(Message.received_at))
         ).all()
         return [_message_payload(message) for message in messages]
 
 
-def get_message(message_id: int) -> dict | None:
+def get_message(owner_username: str, message_id: int) -> dict | None:
     with SessionLocal() as session:
         message = session.get(Message, message_id)
         if message is None:
+            return None
+        inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
+        if inbox is None:
             return None
         message.is_unread = False
         session.commit()
@@ -238,25 +318,37 @@ def get_message(message_id: int) -> dict | None:
         return payload
 
 
-def delete_inbox_messages(address: str) -> int:
+def delete_inbox_messages(owner_username: str, address: str) -> int:
     normalized = normalize_address(address)
     with SessionLocal() as session:
+        inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == owner_username))
+        if inbox is None:
+            return 0
         result = session.execute(delete(Message).where(Message.inbox_address == normalized))
         session.commit()
         return result.rowcount or 0
 
 
-def delete_message(message_id: int) -> int:
+def delete_message(owner_username: str, message_id: int) -> int:
     with SessionLocal() as session:
+        message = session.get(Message, message_id)
+        if message is None:
+            return 0
+        inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
+        if inbox is None:
+            return 0
         result = session.execute(delete(Message).where(Message.id == message_id))
         session.commit()
         return result.rowcount or 0
 
 
-def set_message_unread(message_id: int, is_unread: bool) -> dict | None:
+def set_message_unread(owner_username: str, message_id: int, is_unread: bool) -> dict | None:
     with SessionLocal() as session:
         message = session.get(Message, message_id)
         if message is None:
+            return None
+        inbox = session.scalar(select(Inbox).where(Inbox.address == message.inbox_address, Inbox.owner_username == owner_username))
+        if inbox is None:
             return None
         message.is_unread = is_unread
         session.commit()
