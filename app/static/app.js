@@ -61,8 +61,12 @@ function mailDesk() {
     },
 
     async loadMe() {
-      const payload = await this.api('/api/auth/me')
-      this.auth.user = payload.user
+      try {
+        const payload = await this.api('/api/auth/me')
+        this.auth.user = payload.user
+      } catch {
+        this.auth.user = null
+      }
     },
 
     async register() {
