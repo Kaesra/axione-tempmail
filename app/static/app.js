@@ -4,6 +4,8 @@ function mailDesk() {
   return {
     acceptedDomains: initial.acceptedDomains || ['axione.xyz'],
     pollSeconds: initial.pollSeconds,
+    tempInboxMinutes: initial.tempInboxMinutes || 5,
+    tempDailyLimit: initial.tempDailyLimit || 3,
     currentUser: initial.currentUser,
     adminUsername: initial.adminUsername || 'admin',
     search: '',
@@ -292,7 +294,7 @@ function mailDesk() {
     },
 
     previewInboxAddress() {
-      const local = this.form.localPart?.trim() || 'otomatik-uretilecek'
+      const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
       const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
       return `${local}@${domain}`
     },
