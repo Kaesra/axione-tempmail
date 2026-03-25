@@ -29,6 +29,10 @@ class Settings:
     message_ttl_hours: int = int(os.getenv("TEMPMAIL_MESSAGE_TTL_HOURS", "24"))
     max_messages_per_inbox: int = int(os.getenv("TEMPMAIL_MAX_MESSAGES_PER_INBOX", "100"))
     max_inboxes: int = int(os.getenv("TEMPMAIL_MAX_INBOXES", "10000"))
+    session_hours: int = int(os.getenv("TEMPMAIL_SESSION_HOURS", "72"))
+    secure_cookies: bool = _bool("TEMPMAIL_SECURE_COOKIES", False)
+    admin_username: str = os.getenv("TEMPMAIL_ADMIN_USERNAME", "admin")
+    admin_password: str = os.getenv("TEMPMAIL_ADMIN_PASSWORD", "change-me-now")
 
     @property
     def accepted_domains(self) -> list[str]:
