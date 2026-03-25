@@ -3,172 +3,326 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Temp Mail Control Deck</title>
+    <title>Axione Mail Desk</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: "Manrope", sans-serif; }
+      .mono { font-family: "IBM Plex Mono", monospace; }
+      .glass { backdrop-filter: blur(18px); }
+      .mail-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+      .mail-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 999px; }
+    </style>
   </head>
-  <body>
-    <main class="shell">
-      <section class="hero">
-        <p class="eyebrow">Disposable Mail Gateway</p>
-        <h1>Tek ekrandan inbox uret, kodlari yakala, API ile cek.</h1>
-        <p class="lede">
-          SMTP tarafinda mailleri toplar, web arayuzunde kutulari listeler, API tarafinda gelen kodlari ve mesajlari sunar.
-        </p>
-
-        <div class="panel create-panel">
+  <body class="min-h-screen bg-slate-100 text-slate-900">
+    <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_24%),linear-gradient(180deg,_#f8fafc,_#e2e8f0)]"></div>
+    <main
+      x-data="mailDesk({ acceptedDomains: {{ accepted_domains|tojson }}, pollSeconds: {{ poll_seconds }} })"
+      x-init="init()"
+      class="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-3 lg:p-5"
+    >
+      <header class="glass flex flex-col gap-4 rounded-[28px] border border-white/60 bg-white/80 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:flex-row lg:items-center lg:justify-between lg:px-6">
+        <div>
+          <p class="mono text-xs uppercase tracking-[0.35em] text-sky-600">Axione Mail Desk</p>
+          <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Gmail tarzinda temp ve kalici inbox kontrolu.</h1>
+          <p class="mt-2 max-w-2xl text-sm text-slate-600 lg:text-base">Tailwind + Alpine.js ile yenilenen arayuz; kalici inbox isaretleme, gelen kodlari hizli yakalama ve API destekli is akislarini ayni ekranda toplar.</p>
+        </div>
+        <div class="grid gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white sm:grid-cols-3">
           <div>
-            <label for="localPart">Kutu adi</label>
-            <input id="localPart" placeholder="otomatik olusturulsun">
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Poll</p>
+            <p class="mt-1 text-lg font-semibold" x-text="`${pollSeconds}s`"></p>
           </div>
           <div>
-            <label for="domain">Domain</label>
-            <select id="domain">
-              {% for domain in accepted_domains %}
-              <option value="{{ domain }}">{{ domain }}</option>
-              {% endfor %}
-            </select>
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Inbox</p>
+            <p class="mt-1 text-lg font-semibold" x-text="inboxes.length"></p>
           </div>
-          <button id="createInbox">Inbox Olustur</button>
+          <div>
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Aktif</p>
+            <p class="mt-1 truncate text-sm font-semibold text-emerald-300" x-text="activeInbox ? activeInbox.address : 'Secilmedi'"></p>
+          </div>
         </div>
+      </header>
 
-        <div class="status-row">
-          <span>Poll: {{ poll_seconds }} sn</span>
-          <span>{% if allow_any_domain %}Tum domainler acik{% else %}Sadece izinli domainler{% endif %}</span>
-        </div>
-      </section>
+      <section class="grid min-h-[calc(100vh-180px)] gap-4 lg:grid-cols-[300px_minmax(340px,420px)_minmax(0,1fr)]">
+        <aside class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/82 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div class="rounded-[24px] bg-sky-50 p-4 shadow-inner shadow-sky-100">
+            <div class="grid gap-3">
+              <input x-model="form.localPart" type="text" placeholder="inbox adi veya bos birak" class="rounded-2xl border-slate-200 bg-white/80 text-sm focus:border-sky-400 focus:ring-sky-400">
+              <select x-model="form.domain" class="rounded-2xl border-slate-200 bg-white/80 text-sm focus:border-sky-400 focus:ring-sky-400">
+                <template x-for="domain in acceptedDomains" :key="domain">
+                  <option :value="domain" x-text="domain"></option>
+                </template>
+              </select>
+              <label class="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                <input x-model="form.isPersistent" type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
+                Kalici inbox olarak isaretle
+              </label>
+              <button @click="createInbox()" class="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Yeni Inbox Olustur</button>
+            </div>
+          </div>
 
-      <section class="workspace">
-        <article class="panel inbox-panel">
-          <div class="panel-head">
+          <div class="mt-4 flex items-center justify-between">
             <div>
-              <p class="label">Aktif inbox</p>
-              <h2 id="currentInbox">Heniz secilmedi</h2>
+              <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Inbox'lar</p>
+              <p class="text-sm text-slate-500">Kalicilar ustte kalir</p>
             </div>
-            <div class="actions">
-              <button id="refreshInbox" class="ghost">Yenile</button>
-              <button id="purgeInbox" class="danger">Temizle</button>
-            </div>
+            <button @click="fetchInboxes()" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-sky-300 hover:text-sky-700">Yenile</button>
           </div>
-          <div id="messageList" class="message-list empty">Henuz mesaj yok.</div>
-        </article>
 
-        <article class="panel detail-panel">
-          <div class="panel-head">
+          <div class="mail-scroll mt-4 flex-1 space-y-2 overflow-auto pr-1">
+            <template x-if="!inboxes.length">
+              <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Henuz inbox yok. Ilk kutuyu olustur.</div>
+            </template>
+            <template x-for="inbox in inboxes" :key="inbox.address">
+              <button
+                @click="selectInbox(inbox.address)"
+                :class="activeInbox && activeInbox.address === inbox.address ? 'border-sky-500 bg-sky-50 shadow-sm' : 'border-transparent bg-slate-50 hover:bg-slate-100'"
+                class="w-full rounded-3xl border px-4 py-3 text-left transition"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="truncate text-sm font-semibold text-slate-900" x-text="inbox.address"></span>
+                      <span x-show="inbox.is_persistent" class="mono rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-emerald-700">Kalici</span>
+                    </div>
+                    <p class="mt-1 truncate text-xs text-slate-500" x-text="inbox.latest_subject || 'Mesaj yok'"></p>
+                  </div>
+                  <div class="text-right">
+                    <p class="mono text-[11px] text-slate-400" x-text="inbox.message_count"></p>
+                    <p class="mt-1 text-[11px] text-slate-400" x-text="formatDate(inbox.latest_message_at)"></p>
+                  </div>
+                </div>
+              </button>
+            </template>
+          </div>
+        </aside>
+
+        <section class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/82 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-4">
             <div>
-              <p class="label">Mesaj detayi</p>
-              <h2 id="detailSubject">Secili mesaj yok</h2>
+              <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Aktif Inbox</p>
+              <h2 class="mt-1 text-lg font-bold text-slate-900" x-text="activeInbox ? activeInbox.address : 'Inbox secilmedi'"></h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button @click="togglePersistent()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40" x-text="activeInbox && activeInbox.is_persistent ? 'Kaliciyi Kaldir' : 'Kalici Yap'"></button>
+              <button @click="refreshMessages()" :disabled="!activeInbox" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">Yenile</button>
+              <button @click="purgeInbox()" :disabled="!activeInbox" class="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40">Temizle</button>
             </div>
           </div>
-          <div id="detailCodes" class="codes"></div>
-          <pre id="detailBody" class="detail-body">Yeni bir inbox olusturup mail bekleyebilirsin.</pre>
-        </article>
-      </section>
 
-      <section class="panel api-panel">
-        <p class="label">API</p>
-        <div class="api-grid">
-          <code>POST /api/inboxes</code>
-          <code>GET /api/inboxes/{address}/messages</code>
-          <code>GET /api/messages/{id}</code>
-          <code>DELETE /api/inboxes/{address}/messages</code>
-          <code>GET /api/config</code>
-        </div>
+          <div class="mail-scroll flex-1 overflow-auto px-3 py-3">
+            <template x-if="!messages.length">
+              <div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Bu inbox icin henuz mesaj yok.</div>
+            </template>
+            <div class="space-y-2">
+              <template x-for="message in messages" :key="message.id">
+                <button
+                  @click="loadMessage(message.id)"
+                  :class="selectedMessage && selectedMessage.id === message.id ? 'border-sky-500 bg-sky-50' : 'border-transparent bg-white hover:bg-slate-50'"
+                  class="w-full rounded-[24px] border px-4 py-4 text-left shadow-sm transition"
+                >
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="truncate text-sm font-bold text-slate-900" x-text="message.subject || 'Konu yok'"></span>
+                        <template x-if="message.codes.length">
+                          <span class="mono rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700">Kod var</span>
+                        </template>
+                      </div>
+                      <p class="mt-1 truncate text-xs text-slate-500" x-text="message.mail_from"></p>
+                    </div>
+                    <div class="text-right text-xs text-slate-400">
+                      <p x-text="formatDate(message.received_at)"></p>
+                      <p class="mono mt-2" x-text="message.codes[0] || '-' "></p>
+                    </div>
+                  </div>
+                </button>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass flex min-h-[320px] flex-col rounded-[28px] border border-white/60 bg-white/88 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div class="border-b border-slate-200 px-5 py-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Mesaj Detayi</p>
+                <h2 class="mt-1 text-xl font-bold text-slate-900" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Mesaj secilmedi'"></h2>
+                <p class="mt-2 text-sm text-slate-500" x-text="selectedMessage ? selectedMessage.mail_from : 'Bir mesaja tikla' "></p>
+              </div>
+              <button @click="deleteSelectedMessage()" :disabled="!selectedMessage" class="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Mesaji Sil</button>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
+                <button @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200" x-text="code"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="mail-scroll flex-1 overflow-auto px-5 py-5">
+            <template x-if="selectedMessageDetail">
+              <div class="space-y-5">
+                <div class="rounded-[24px] bg-slate-950 px-4 py-4 text-white">
+                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Hizli Bilgi</p>
+                  <div class="mt-3 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p class="text-xs text-slate-400">Gonderen</p>
+                      <p class="mt-1 break-all text-sm font-semibold" x-text="selectedMessageDetail.mail_from"></p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-slate-400">Alici</p>
+                      <p class="mt-1 break-all text-sm font-semibold" x-text="selectedMessageDetail.inbox_address"></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Text Body</p>
+                  <pre class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700" x-text="selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi'"></pre>
+                </div>
+
+                <details class="rounded-[24px] border border-slate-200 bg-white px-4 py-4">
+                  <summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw Headers</summary>
+                  <pre class="mono mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-500" x-text="selectedMessageDetail.raw_headers"></pre>
+                </details>
+              </div>
+            </template>
+            <template x-if="!selectedMessageDetail">
+              <div class="grid min-h-[320px] place-items-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">Soldan bir inbox, ortadan bir mesaj sec.</div>
+            </template>
+          </div>
+        </section>
       </section>
     </main>
 
     <script>
-      const pollSeconds = {{ poll_seconds }};
-      const createButton = document.getElementById('createInbox');
-      const refreshButton = document.getElementById('refreshInbox');
-      const localPartInput = document.getElementById('localPart');
-      const domainSelect = document.getElementById('domain');
-      const currentInbox = document.getElementById('currentInbox');
-      const messageList = document.getElementById('messageList');
-      const detailSubject = document.getElementById('detailSubject');
-      const detailBody = document.getElementById('detailBody');
-      const detailCodes = document.getElementById('detailCodes');
-      const purgeInboxButton = document.getElementById('purgeInbox');
+      function mailDesk({ acceptedDomains, pollSeconds }) {
+        return {
+          acceptedDomains,
+          pollSeconds,
+          inboxes: [],
+          messages: [],
+          activeInbox: null,
+          selectedMessage: null,
+          selectedMessageDetail: null,
+          poller: null,
+          form: {
+            localPart: '',
+            domain: acceptedDomains[0] || 'axione.xyz',
+            isPersistent: false,
+          },
 
-      let activeInbox = null;
-      let poller = null;
+          async init() {
+            await this.fetchInboxes();
+            this.startPolling();
+          },
 
-      async function createInbox() {
-        const response = await fetch('/api/inboxes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local_part: localPartInput.value || null,
-            domain: domainSelect.value || null,
-          }),
-        });
-        const inbox = await response.json();
-        activeInbox = inbox.address;
-        currentInbox.textContent = activeInbox;
-        await refreshMessages();
-        startPolling();
-      }
+          async api(url, options = {}) {
+            const response = await fetch(url, {
+              headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+              ...options,
+            });
+            if (!response.ok) {
+              const payload = await response.text();
+              throw new Error(payload || 'Istek basarisiz');
+            }
+            if (response.status === 204) return null;
+            const contentType = response.headers.get('content-type') || '';
+            return contentType.includes('application/json') ? response.json() : response.text();
+          },
 
-      async function refreshMessages() {
-        if (!activeInbox) return;
-        const response = await fetch(`/api/inboxes/${encodeURIComponent(activeInbox)}/messages`);
-        const messages = await response.json();
+          async fetchInboxes() {
+            this.inboxes = await this.api('/api/inboxes');
+            if (!this.activeInbox && this.inboxes[0]) {
+              await this.selectInbox(this.inboxes[0].address);
+            } else if (this.activeInbox) {
+              const fresh = this.inboxes.find((item) => item.address === this.activeInbox.address);
+              if (fresh) this.activeInbox = fresh;
+            }
+          },
 
-        if (!messages.length) {
-          messageList.className = 'message-list empty';
-          messageList.innerHTML = 'Henuz mesaj yok.';
-          detailSubject.textContent = 'Secili mesaj yok';
-          detailBody.textContent = 'Yeni bir inbox olusturup mail bekleyebilirsin.';
-          detailCodes.innerHTML = '';
-          return;
+          async createInbox() {
+            const inbox = await this.api('/api/inboxes', {
+              method: 'POST',
+              body: JSON.stringify({
+                local_part: this.form.localPart || null,
+                domain: this.form.domain || null,
+                is_persistent: this.form.isPersistent,
+              }),
+            });
+            this.form.localPart = '';
+            await this.fetchInboxes();
+            await this.selectInbox(inbox.address);
+          },
+
+          async selectInbox(address) {
+            this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`);
+            await this.refreshMessages();
+          },
+
+          async refreshMessages() {
+            if (!this.activeInbox) return;
+            this.messages = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`);
+            await this.fetchInboxes();
+            if (!this.messages.length) {
+              this.selectedMessage = null;
+              this.selectedMessageDetail = null;
+              return;
+            }
+            const currentId = this.selectedMessage?.id;
+            const nextMessage = this.messages.find((item) => item.id === currentId) || this.messages[0];
+            await this.loadMessage(nextMessage.id);
+          },
+
+          async loadMessage(messageId) {
+            this.selectedMessageDetail = await this.api(`/api/messages/${messageId}`);
+            this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail;
+          },
+
+          async togglePersistent() {
+            if (!this.activeInbox) return;
+            const updated = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ is_persistent: !this.activeInbox.is_persistent }),
+            });
+            this.activeInbox = updated;
+            await this.fetchInboxes();
+          },
+
+          async purgeInbox() {
+            if (!this.activeInbox) return;
+            await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`, { method: 'DELETE' });
+            await this.refreshMessages();
+          },
+
+          async deleteSelectedMessage() {
+            if (!this.selectedMessage) return;
+            await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'DELETE' });
+            await this.refreshMessages();
+          },
+
+          startPolling() {
+            clearInterval(this.poller);
+            this.poller = setInterval(() => {
+              if (this.activeInbox) this.refreshMessages();
+            }, this.pollSeconds * 1000);
+          },
+
+          copyText(value) {
+            navigator.clipboard.writeText(value);
+          },
+
+          formatDate(value) {
+            if (!value) return '-';
+            return new Date(value).toLocaleString('tr-TR', {
+              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+          },
         }
-
-        messageList.className = 'message-list';
-        messageList.innerHTML = messages.map((message) => `
-          <button class="message-card" data-id="${message.id}">
-            <span class="message-subject">${message.subject || 'Konu yok'}</span>
-            <span class="message-from">${message.mail_from}</span>
-            <span class="message-time">${new Date(message.received_at).toLocaleString('tr-TR')}</span>
-            <span class="message-codes">${message.codes.length ? message.codes.join(' / ') : 'Kod tespit edilmedi'}</span>
-          </button>
-        `).join('');
-
-        document.querySelectorAll('.message-card').forEach((item) => {
-          item.addEventListener('click', () => loadMessage(item.dataset.id));
-        });
-
-        if (messages[0]) {
-          await loadMessage(messages[0].id, false);
-        }
       }
-
-      async function purgeInbox() {
-        if (!activeInbox) return;
-        await fetch(`/api/inboxes/${encodeURIComponent(activeInbox)}/messages`, { method: 'DELETE' });
-        await refreshMessages();
-      }
-
-      async function loadMessage(messageId, scroll = true) {
-        const response = await fetch(`/api/messages/${messageId}`);
-        const message = await response.json();
-        detailSubject.textContent = message.subject || 'Konu yok';
-        detailBody.textContent = message.text_body || message.html_body || 'Icerik bulunamadi';
-        detailCodes.innerHTML = message.codes.map((code) => `<span>${code}</span>`).join('');
-        if (scroll) {
-          detailBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }
-
-      function startPolling() {
-        clearInterval(poller);
-        poller = setInterval(refreshMessages, pollSeconds * 1000);
-      }
-
-      createButton.addEventListener('click', createInbox);
-      refreshButton.addEventListener('click', refreshMessages);
-      purgeInboxButton.addEventListener('click', purgeInbox);
     </script>
   </body>
 </html>
