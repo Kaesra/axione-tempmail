@@ -80,7 +80,13 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
             if part.get_content_disposition() == "attachment":
                 continue
             content_type = part.get_content_type()
-            payload = part.get_content()
+            if content_type.startswith("multipart/"):
+                continue
+
+            try:
+                payload = part.get_content()
+            except KeyError:
+                continue
             if not isinstance(payload, str):
                 continue
             if content_type == "text/plain" and not text_body:
@@ -88,7 +94,10 @@ def save_message(mail_from: str, rcpt_tos: list[str], data: bytes) -> None:
             if content_type == "text/html" and not html_body:
                 html_body = payload
     else:
-        payload = parsed.get_content()
+        try:
+            payload = parsed.get_content()
+        except KeyError:
+            payload = ""
         if isinstance(payload, str):
             if parsed.get_content_type() == "text/html":
                 html_body = payload
