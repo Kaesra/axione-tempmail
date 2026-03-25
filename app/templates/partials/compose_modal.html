@@ -28,9 +28,12 @@
       <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Profil Adi</label>
       <input x-model="form.profileName" type="text" placeholder="ornek: TikTok Profilim" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
     </div>
-    <div>
+    <div x-show="form.inboxMode !== 'temp'">
       <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Local Part</label>
       <input x-model="form.localPart" type="text" placeholder="ornek: berkay veya bos birak" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+    </div>
+    <div x-show="form.inboxMode === 'temp'" class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      Temp mail adresi icin `local-part` otomatik uretilir. Olusunca hemen kullanabilirsin ve sure dolunca sistem siler.
     </div>
 
     <div>
@@ -60,6 +63,12 @@
 
     <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600" x-show="form.inboxMode === 'personal'">
       Kisisel inbox admin tarafindan onaylanana kadar beklemede kalir.
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+      <p class="font-medium text-slate-800">Sunucu Kurallari</p>
+      <p class="mt-2" x-show="form.inboxMode === 'temp'">Temp kutular `{{ temp_inbox_minutes }}` dakika aktif kalir. Normal kullanicilar icin gunluk limit `{{ temp_daily_limit }}` adettir, admin sinirsizdir.</p>
+      <p class="mt-2" x-show="form.inboxMode === 'personal'">Kisisel kutular sure siniri olmadan saklanir ama admin onayi olmadan aktif kabul edilmez.</p>
     </div>
 
     <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
