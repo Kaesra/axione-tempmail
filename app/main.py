@@ -19,11 +19,13 @@ from app.mail_service import (
     ensure_inbox,
     get_message,
     is_domain_allowed,
+    list_inboxes,
     list_messages,
     normalize_address,
+    set_inbox_persistent,
 )
 from app.models import Inbox
-from app.schemas import ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, MessageDetail, MessagePreview
+from app.schemas import ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -95,7 +97,14 @@ async def create_inbox(payload: InboxCreate) -> InboxResponse:
         inbox = ensure_inbox(address)
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
-    return InboxResponse(address=inbox.address, created_at=inbox.created_at)
+    if payload.is_persistent and not inbox.is_persistent:
+        inbox = set_inbox_persistent(address, True) or inbox
+    return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+
+
+@app.get("/api/inboxes", response_model=list[InboxSummary])
+async def inbox_index() -> list[InboxSummary]:
+    return [InboxSummary(**item) for item in list_inboxes()]
 
 
 @app.get("/api/inboxes/{address:path}/messages", response_model=list[MessagePreview])
@@ -110,7 +119,15 @@ async def get_inbox(address: str) -> InboxResponse:
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
         if inbox is None:
             raise HTTPException(status_code=404, detail="Inbox not found")
-        return InboxResponse(address=inbox.address, created_at=inbox.created_at)
+        return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
+
+
+@app.patch("/api/inboxes/{address:path}", response_model=InboxResponse)
+async def update_inbox(address: str, payload: InboxUpdate) -> InboxResponse:
+    inbox = set_inbox_persistent(address, payload.is_persistent)
+    if inbox is None:
+        raise HTTPException(status_code=404, detail="Inbox not found")
+    return InboxResponse(address=inbox.address, is_persistent=inbox.is_persistent, created_at=inbox.created_at)
 
 
 @app.get("/api/messages/{message_id}", response_model=MessageDetail)
