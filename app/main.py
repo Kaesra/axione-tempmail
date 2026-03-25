@@ -39,6 +39,7 @@ from app.mail_service import (
     normalize_address,
     set_message_unread,
     set_inbox_persistent,
+    temp_inbox_creations_today,
 )
 from app.models import Inbox
 from app.schemas import AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
@@ -99,6 +100,8 @@ async def index(request: Request):
             "accepted_domains": settings.accepted_domains,
             "allow_any_domain": settings.allow_any_domain,
             "poll_seconds": settings.poll_seconds,
+            "temp_inbox_minutes": settings.temp_inbox_minutes,
+            "temp_daily_limit": settings.temp_daily_limit,
             "current_user": template_user_payload(current_user),
             "admin_username": settings.admin_username,
         },
@@ -172,6 +175,8 @@ async def config(_: dict = Depends(require_user)) -> ConfigResponse:
         allow_any_domain=settings.allow_any_domain,
         poll_seconds=settings.poll_seconds,
         message_ttl_hours=settings.message_ttl_hours,
+        temp_inbox_minutes=settings.temp_inbox_minutes,
+        temp_daily_limit=settings.temp_daily_limit,
         max_messages_per_inbox=settings.max_messages_per_inbox,
     )
 
@@ -193,14 +198,19 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
     if not is_domain_allowed(domain):
         raise HTTPException(status_code=400, detail="Domain is not allowed")
 
-    local_part = (payload.local_part or generate_local_part()).strip().lower()
+    if payload.inbox_mode == "temp" and not user["is_admin"]:
+        temp_count = temp_inbox_creations_today(user["username"])
+        if temp_count >= settings.temp_daily_limit:
+            raise HTTPException(status_code=429, detail=f"Gunluk temp mail limiti doldu ({settings.temp_daily_limit})")
+
+    local_part = generate_local_part() if payload.inbox_mode == "temp" else (payload.local_part or generate_local_part()).strip().lower()
     address = normalize_address(f"{local_part}@{domain}")
     try:
         inbox = ensure_inbox(
             address,
             owner_username=user["username"],
             is_persistent=payload.is_persistent,
-            profile_name=payload.profile_name or f"{local_part}@{domain}",
+            profile_name=payload.profile_name or ("Temp Profil" if payload.inbox_mode == "temp" else f"{local_part}@{domain}"),
             profile_type="manual",
             inbox_mode=payload.inbox_mode,
         )
