@@ -12,7 +12,7 @@ class Inbox(Base):
     __tablename__ = "inboxes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    local_part: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    local_part: Mapped[str] = mapped_column(String(120), index=True)
     domain: Mapped[str] = mapped_column(String(255), index=True)
     address: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     owner_username: Mapped[str] = mapped_column(String(120), default="", index=True)

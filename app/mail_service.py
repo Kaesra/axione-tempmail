@@ -214,7 +214,7 @@ def ensure_inbox(
     with SessionLocal() as session:
         inbox_count = session.scalar(select(func.count()).select_from(Inbox)) or 0
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized))
-        local_conflict = session.scalar(select(Inbox).where(Inbox.local_part == local_part))
+        local_conflict = session.scalar(select(Inbox).where(Inbox.local_part == local_part, Inbox.domain == domain))
         if local_conflict is not None and local_conflict.address != normalized:
             raise ValueError("This inbox name is already reserved")
         if inbox is None:

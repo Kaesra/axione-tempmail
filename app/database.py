@@ -15,6 +15,58 @@ engine = create_engine(settings.db_url, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
+def _sqlite_has_unique_local_part(connection) -> bool:
+    rows = connection.execute(text("PRAGMA index_list('inboxes')")).fetchall()
+    for row in rows:
+        is_unique = bool(row[2])
+        if not is_unique:
+            continue
+        index_name = row[1]
+        columns = [item[2] for item in connection.execute(text(f"PRAGMA index_info('{index_name}')")).fetchall()]
+        if columns == ["local_part"]:
+            return True
+    return False
+
+
+def _rebuild_inboxes_table_without_local_part_unique(connection) -> None:
+    connection.execute(text("ALTER TABLE inboxes RENAME TO inboxes_legacy"))
+    connection.execute(
+        text(
+            "CREATE TABLE inboxes ("
+            "id INTEGER NOT NULL PRIMARY KEY, "
+            "local_part VARCHAR(120) NOT NULL, "
+            "domain VARCHAR(255) NOT NULL, "
+            "address VARCHAR(255) NOT NULL, "
+            "owner_username VARCHAR(120) NOT NULL DEFAULT '', "
+            "profile_name VARCHAR(120) NOT NULL DEFAULT 'Inbox', "
+            "profile_type VARCHAR(50) NOT NULL DEFAULT 'manual', "
+            "inbox_mode VARCHAR(30) NOT NULL DEFAULT 'temp', "
+            "source_ip VARCHAR(120) NOT NULL DEFAULT '', "
+            "is_persistent BOOLEAN NOT NULL DEFAULT 0, "
+            "requires_approval BOOLEAN NOT NULL DEFAULT 0, "
+            "is_approved BOOLEAN NOT NULL DEFAULT 1, "
+            "approved_at DATETIME, "
+            "expires_at DATETIME, "
+            "created_at DATETIME NOT NULL, "
+            "UNIQUE(address)"
+            ")"
+        )
+    )
+    connection.execute(
+        text(
+            "INSERT INTO inboxes ("
+            "id, local_part, domain, address, owner_username, profile_name, profile_type, inbox_mode, source_ip, "
+            "is_persistent, requires_approval, is_approved, approved_at, expires_at, created_at"
+            ") "
+            "SELECT "
+            "id, local_part, domain, address, owner_username, profile_name, profile_type, inbox_mode, source_ip, "
+            "is_persistent, requires_approval, is_approved, approved_at, expires_at, created_at "
+            "FROM inboxes_legacy"
+        )
+    )
+    connection.execute(text("DROP TABLE inboxes_legacy"))
+
+
 def init_db() -> None:
     from app import models
 
@@ -25,6 +77,12 @@ def init_db() -> None:
     message_columns = {column["name"] for column in inspector.get_columns("messages")}
     google_account_tables = set(inspector.get_table_names())
     with engine.begin() as connection:
+        if settings.db_url.startswith("sqlite") and _sqlite_has_unique_local_part(connection):
+            _rebuild_inboxes_table_without_local_part_unique(connection)
+            inspector = inspect(engine)
+            inbox_columns = {column["name"] for column in inspector.get_columns("inboxes")}
+            message_columns = {column["name"] for column in inspector.get_columns("messages")}
+            google_account_tables = set(inspector.get_table_names())
         if "local_part" not in inbox_columns:
             connection.execute(text("ALTER TABLE inboxes ADD COLUMN local_part VARCHAR(120) DEFAULT ''"))
         if "domain" not in inbox_columns:
@@ -88,6 +146,8 @@ def init_db() -> None:
                 connection.execute(text("ALTER TABLE google_aliases ADD COLUMN is_temp BOOLEAN DEFAULT 1"))
             if "auto_generated" not in google_alias_columns:
                 connection.execute(text("ALTER TABLE google_aliases ADD COLUMN auto_generated BOOLEAN DEFAULT 1"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_local_part ON inboxes (local_part)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_domain ON inboxes (domain)"))
         connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_owner_expires_created ON inboxes (owner_username, expires_at, created_at)"))
         connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_expires_persistent_created ON inboxes (expires_at, is_persistent, created_at)"))
         connection.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_inbox_received ON messages (inbox_address, received_at)"))
