@@ -138,6 +138,7 @@
             <div class="mt-5 space-y-3 text-sm font-medium text-slate-700">
               <a href="#product" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Urun ne saglar?</a>
               <a href="#auth" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Kimlik dogrulama</a>
+              <a href="#updates" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Guncelleme notu</a>
               <a href="#api" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">API kullanim ornekleri</a>
               <a href="#domain-policy" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Domain politikasi</a>
               <a href="#responses" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Response alanlari</a>
@@ -169,6 +170,25 @@
                 <div class="rounded-3xl border border-slate-200 p-5 md:col-span-2">
                   <p class="text-lg font-semibold text-slate-900">Googlemail temp havuzu</p>
                   <p class="mt-2 text-sm leading-6 text-slate-600">Domain seciminde `googlemail` secilebildiginde sistem bagli Gmail hesaplarin icin yuzlerce temp alias uretir ve tum bagli Gmail maillerini tek bir ortak havuzda toplar.</p>
+                </div>
+              </div>
+            </section>
+
+            <section id="updates" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-amber-700">Update Note</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Temp domain seciminde yeni API davranisi</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-3">
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Yeni alan</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">`POST /api/inboxes` artik `exclude_domains` listesi kabul eder.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Temp davranisi</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Temp inbox isteginde `axione.xyz` istemiyorsan onu `exclude_domains` icine ekleyebilirsin; servis kalan aktif domainlerden rastgele birini secer.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Sinir</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Tum aktif domainleri dislarsan istek `No active domains available after exclusions` hatasi ile reddedilir.</p>
                 </div>
               </div>
             </section>
@@ -256,6 +276,20 @@ DELETE /api/admin/domains/blacklist/{domain}</code></pre>
     "domain": "{{ accepted_domains[0] if accepted_domains else 'axione.xyz' }}"
   }'</code></pre>
                   </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">3b. Axione'yi dislayip rastgele alternatif domain sec</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl -X POST https://mail.axione.xyz/api/inboxes \
+  -H 'Content-Type: application/json' \
+  -H 'Cookie: tempmail_session=&lt;session-cookie&gt;' \
+  -d '{
+    "inbox_mode": "temp",
+    "exclude_domains": ["axione.xyz"]
+  }'</code></pre>
+                  </div>
+                  <p class="mt-3 text-sm leading-6 text-slate-600">Bu durumda servis blacklist disindaki ve `exclude_domains` listesinde olmayan aktif domainlerden rastgele birini secer.</p>
                 </div>
 
                 <div>

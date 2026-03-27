@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import random
 
 from sqlalchemy import select
 
@@ -45,9 +46,34 @@ def available_domains() -> list[str]:
     return [domain for domain in settings.accepted_domains if domain not in blocked]
 
 
+def filtered_domains(excluded_domains: list[str] | None = None) -> list[str]:
+    excluded = {normalize_domain(domain) for domain in (excluded_domains or []) if normalize_domain(domain)}
+    return [domain for domain in available_domains() if domain not in excluded]
+
+
 def default_domain() -> str:
     domains = available_domains()
     return domains[0] if domains else ""
+
+
+def select_inbox_domain(
+    preferred_domain: str | None = None,
+    excluded_domains: list[str] | None = None,
+    *,
+    randomize_filtered_temp: bool = False,
+) -> str:
+    domains = filtered_domains(excluded_domains)
+    if not domains:
+        return ""
+
+    normalized_preferred = normalize_domain(preferred_domain or "")
+    if normalized_preferred:
+        return normalized_preferred if normalized_preferred in domains else ""
+
+    if randomize_filtered_temp and excluded_domains:
+        return random.choice(domains)
+
+    return domains[0]
 
 
 def list_blocked_domains() -> list[dict]:

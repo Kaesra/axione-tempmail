@@ -27,7 +27,7 @@ from app.auth_service import (
 )
 from app.config import settings
 from app.database import SessionLocal, init_db
-from app.domain_service import available_domains, default_domain, list_blocked_domains, upsert_blocked_domain, delete_blocked_domain
+from app.domain_service import available_domains, default_domain, list_blocked_domains, normalize_domain, select_inbox_domain, upsert_blocked_domain, delete_blocked_domain
 from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, create_temp_google_alias, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
 from app.mail_service import (
     approve_personal_inbox,
@@ -350,8 +350,17 @@ async def healthz() -> HealthResponse:
 
 @app.post("/api/inboxes", response_model=InboxResponse)
 async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user)) -> InboxResponse:
-    selected_domain = payload.domain or default_domain()
+    selected_domain = select_inbox_domain(
+        payload.domain,
+        payload.exclude_domains,
+        randomize_filtered_temp=payload.inbox_mode == "temp",
+    )
     if not selected_domain:
+        requested_domain = normalize_domain(payload.domain or "")
+        if requested_domain:
+            raise HTTPException(status_code=400, detail="Requested domain is not available")
+        if payload.exclude_domains:
+            raise HTTPException(status_code=400, detail="No active domains available after exclusions")
         raise HTTPException(status_code=503, detail="No active domains available")
     domain = selected_domain.lower()
     if not is_domain_allowed(domain):

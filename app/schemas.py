@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class InboxCreate(BaseModel):
     local_part: str | None = Field(default=None, min_length=1, max_length=64)
     domain: str | None = Field(default=None, min_length=1, max_length=255)
+    exclude_domains: list[str] = Field(default_factory=list)
     is_persistent: bool = False
     profile_name: str | None = Field(default=None, min_length=1, max_length=120)
     inbox_mode: str = Field(default="temp", pattern="^(temp|personal)$")
