@@ -4,12 +4,15 @@ from datetime import datetime, timedelta
 from email import policy
 from email.parser import BytesParser
 
-from sqlalchemy import delete, desc, func, select
+from sqlalchemy import case, delete, desc, func, select
 
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Inbox, Message
 from app.utils import detect_message_category, detect_message_kind, extract_codes, extract_links, html_to_text, pick_verification_link, summarize_text
+
+
+VERIFICATION_MESSAGE_KINDS = ["verification", "password_reset", "login_link", "code"]
 
 
 def normalize_address(address: str) -> str:
@@ -47,20 +50,47 @@ def sanitize_ip_label(ip_address: str) -> str:
     return sanitize_local_part(ip_address.replace(":", "-").replace(".", "-")) or "unknown-ip"
 
 
-def _inbox_payload(session, inbox: Inbox) -> dict:
-    latest_message = session.scalar(
-        select(Message)
-        .where(Message.inbox_address == inbox.address)
-        .order_by(desc(Message.received_at), desc(Message.id))
-        .limit(1)
-    )
-    message_count = session.scalar(select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address)) or 0
-    unread_count = session.scalar(
-        select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.is_unread.is_(True))
-    ) or 0
-    verification_count = session.scalar(
-        select(func.count()).select_from(Message).where(Message.inbox_address == inbox.address, Message.message_kind.in_(["verification", "password_reset", "login_link", "code"]))
-    ) or 0
+def _build_inbox_stats(session, addresses: list[str]) -> dict[str, dict]:
+    if not addresses:
+        return {}
+
+    counts = session.execute(
+        select(
+            Message.inbox_address,
+            func.count(Message.id),
+            func.sum(case((Message.is_unread.is_(True), 1), else_=0)),
+            func.sum(case((Message.message_kind.in_(VERIFICATION_MESSAGE_KINDS), 1), else_=0)),
+        )
+        .where(Message.inbox_address.in_(addresses))
+        .group_by(Message.inbox_address)
+    ).all()
+
+    stats = {
+        address: {
+            "message_count": int(message_count or 0),
+            "unread_count": int(unread_count or 0),
+            "verification_count": int(verification_count or 0),
+            "latest_message_at": None,
+            "latest_subject": "",
+        }
+        for address, message_count, unread_count, verification_count in counts
+    }
+
+    latest_rows = session.execute(
+        select(Message.inbox_address, Message.received_at, Message.subject)
+        .where(Message.inbox_address.in_(addresses))
+        .order_by(Message.inbox_address, desc(Message.received_at), desc(Message.id))
+    ).all()
+    for address, received_at, subject in latest_rows:
+        if address in stats and stats[address]["latest_message_at"] is None:
+            stats[address]["latest_message_at"] = received_at
+            stats[address]["latest_subject"] = subject or ""
+
+    return stats
+
+
+def _inbox_payload(inbox: Inbox, stats: dict | None = None) -> dict:
+    inbox_stats = stats or {}
     return {
         "local_part": inbox.local_part,
         "domain": inbox.domain,
@@ -74,11 +104,27 @@ def _inbox_payload(session, inbox: Inbox) -> dict:
         "approved_at": inbox.approved_at,
         "expires_at": inbox.expires_at,
         "created_at": inbox.created_at,
-        "message_count": message_count,
-        "unread_count": unread_count,
-        "verification_count": verification_count,
-        "latest_message_at": latest_message.received_at if latest_message else None,
-        "latest_subject": latest_message.subject if latest_message else "",
+        "message_count": int(inbox_stats.get("message_count") or 0),
+        "unread_count": int(inbox_stats.get("unread_count") or 0),
+        "verification_count": int(inbox_stats.get("verification_count") or 0),
+        "latest_message_at": inbox_stats.get("latest_message_at"),
+        "latest_subject": inbox_stats.get("latest_subject") or "",
+    }
+
+
+def _admin_inbox_payload(inbox: Inbox, stats: dict | None = None) -> dict:
+    return {
+        **_inbox_payload(inbox, stats),
+        "owner_username": inbox.owner_username,
+        "source_ip": inbox.source_ip,
+    }
+
+
+def _admin_message_payload(message: Message, inbox: Inbox | None) -> dict:
+    return {
+        **_message_payload(message),
+        "owner_username": inbox.owner_username if inbox else "",
+        "inbox_profile_name": inbox.profile_name if inbox else message.inbox_address,
     }
 
 
@@ -163,7 +209,8 @@ def approve_personal_inbox(inbox_id: int) -> dict | None:
         inbox.expires_at = None
         session.commit()
         session.refresh(inbox)
-        return _inbox_payload(session, inbox)
+        stats = _build_inbox_stats(session, [inbox.address]).get(inbox.address, {})
+        return _inbox_payload(inbox, stats)
 
 
 def list_pending_personal_inboxes() -> list[dict]:
@@ -288,7 +335,19 @@ def list_inboxes(owner_username: str) -> list[dict]:
             .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()))
             .order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))
         ).all()
-        return [_inbox_payload(session, inbox) for inbox in inboxes]
+        stats = _build_inbox_stats(session, [inbox.address for inbox in inboxes])
+        return [_inbox_payload(inbox, stats.get(inbox.address, {})) for inbox in inboxes]
+
+
+def list_all_inboxes() -> list[dict]:
+    with SessionLocal() as session:
+        inboxes = session.scalars(
+            select(Inbox)
+            .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()))
+            .order_by(desc(Inbox.is_persistent), desc(Inbox.created_at))
+        ).all()
+        stats = _build_inbox_stats(session, [inbox.address for inbox in inboxes])
+        return [_admin_inbox_payload(inbox, stats.get(inbox.address, {})) for inbox in inboxes]
 
 
 def _trim_inbox_messages(session, address: str) -> None:
@@ -435,6 +494,44 @@ def get_message(owner_username: str, message_id: int) -> dict | None:
             "raw_headers": message.raw_headers,
         }
         return payload
+
+
+def list_all_messages(limit: int = 100) -> list[dict]:
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(Message, Inbox)
+            .join(Inbox, Inbox.address == Message.inbox_address, isouter=True)
+            .where((Inbox.expires_at.is_(None)) | (Inbox.expires_at > datetime.utcnow()) | (Inbox.id.is_(None)))
+            .order_by(desc(Message.received_at), desc(Message.id))
+            .limit(limit)
+        ).all()
+        return [_admin_message_payload(message, inbox) for message, inbox in rows]
+
+
+def get_admin_message(message_id: int) -> dict | None:
+    with SessionLocal() as session:
+        row = session.execute(
+            select(Message, Inbox)
+            .join(Inbox, Inbox.address == Message.inbox_address, isouter=True)
+            .where(Message.id == message_id)
+        ).first()
+        if row is None:
+            return None
+        message, inbox = row
+        payload = {
+            **_admin_message_payload(message, inbox),
+            "text_body": message.text_body,
+            "html_body": message.html_body,
+            "raw_headers": message.raw_headers,
+        }
+        return payload
+
+
+def delete_admin_message(message_id: int) -> int:
+    with SessionLocal() as session:
+        result = session.execute(delete(Message).where(Message.id == message_id))
+        session.commit()
+        return result.rowcount or 0
 
 
 def delete_inbox_messages(owner_username: str, address: str) -> int:

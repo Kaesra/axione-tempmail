@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
@@ -12,27 +13,35 @@ from sqlalchemy import select
 from app.auth_service import (
     SESSION_COOKIE,
     approve_user,
+    create_api_key,
     ensure_bootstrap_admin,
     get_user_by_session,
     list_pending_users,
+    list_api_keys,
     login_user,
     logout_session,
     register_user,
+    revoke_api_key,
     require_admin,
     require_user,
 )
 from app.config import settings
 from app.database import SessionLocal, init_db
+from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, create_temp_google_alias, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
 from app.mail_service import (
     approve_personal_inbox,
     cleanup_expired_messages,
     counts,
+    delete_admin_message,
     delete_inbox_messages,
     delete_message,
     ensure_default_inboxes,
     ensure_inbox,
+    get_admin_message,
     get_message,
     is_domain_allowed,
+    list_all_inboxes,
+    list_all_messages,
     list_inboxes,
     list_pending_personal_inboxes,
     list_messages,
@@ -42,7 +51,7 @@ from app.mail_service import (
     temp_inbox_creations_today,
 )
 from app.models import Inbox
-from app.schemas import AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
+from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, GoogleAccountResponse, GoogleAliasCreate, GoogleAliasResponse, GoogleConnectResponse, GoogleMessageResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -74,6 +83,36 @@ def template_user_payload(user: dict | None) -> dict | None:
     return payload
 
 
+def inbox_response_payload(inbox: Inbox) -> InboxResponse:
+    return InboxResponse(
+        local_part=inbox.local_part,
+        domain=inbox.domain,
+        address=inbox.address,
+        profile_name=inbox.profile_name,
+        profile_type=inbox.profile_type,
+        inbox_mode=inbox.inbox_mode,
+        is_persistent=inbox.is_persistent,
+        requires_approval=inbox.requires_approval,
+        is_approved=inbox.is_approved,
+        approved_at=inbox.approved_at,
+        expires_at=inbox.expires_at,
+        created_at=inbox.created_at,
+    )
+
+
+def app_template_context(current_user: dict | None) -> dict:
+    return {
+        "accepted_domains": settings.accepted_domains,
+        "allow_any_domain": settings.allow_any_domain,
+        "poll_seconds": settings.poll_seconds,
+        "temp_inbox_minutes": settings.temp_inbox_minutes,
+        "temp_daily_limit": settings.temp_daily_limit,
+        "current_user": template_user_payload(current_user),
+        "admin_username": settings.admin_username,
+        "google_enabled": google_enabled(),
+    }
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -93,17 +132,20 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     current_user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    return templates.TemplateResponse(request, "index.html", app_template_context(current_user))
+
+
+@app.get("/guide", response_class=HTMLResponse)
+async def guide(request: Request):
+    current_user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
     return templates.TemplateResponse(
         request,
-        "index.html",
+        "docs.html",
         {
-            "accepted_domains": settings.accepted_domains,
-            "allow_any_domain": settings.allow_any_domain,
-            "poll_seconds": settings.poll_seconds,
-            "temp_inbox_minutes": settings.temp_inbox_minutes,
-            "temp_daily_limit": settings.temp_daily_limit,
             "current_user": template_user_payload(current_user),
-            "admin_username": settings.admin_username,
+            "accepted_domains": settings.accepted_domains,
+            "smtp_port": settings.smtp_port,
+            "web_port": settings.web_port,
         },
     )
 
@@ -142,6 +184,84 @@ async def auth_me(request: Request) -> AuthStatusResponse:
     return AuthStatusResponse(user=UserResponse(**user) if user else None)
 
 
+@app.get("/api/auth/api-keys", response_model=list[ApiKeyResponse])
+async def auth_api_keys(user: dict = Depends(require_user)) -> list[ApiKeyResponse]:
+    return [ApiKeyResponse(**item) for item in list_api_keys(user["username"])]
+
+
+@app.post("/api/auth/api-keys", response_model=ApiKeyCreateResponse)
+async def auth_create_api_key(payload: ApiKeyCreate, user: dict = Depends(require_user)) -> ApiKeyCreateResponse:
+    try:
+        api_key = create_api_key(user["username"], payload.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ApiKeyCreateResponse(api_key=ApiKeyResponse(**api_key), message="API key created")
+
+
+@app.delete("/api/auth/api-keys/{api_key_id}", response_model=ApiKeyResponse)
+async def auth_revoke_api_key(api_key_id: int, user: dict = Depends(require_user)) -> ApiKeyResponse:
+    api_key = revoke_api_key(user["username"], api_key_id)
+    if api_key is None:
+        raise HTTPException(status_code=404, detail="API key not found")
+    return ApiKeyResponse(**api_key)
+
+
+@app.get("/api/integrations/google/connect", response_model=GoogleConnectResponse)
+async def google_connect(user: dict = Depends(require_user)) -> GoogleConnectResponse:
+    try:
+        url = create_google_oauth_url(user["username"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleConnectResponse(url=url)
+
+
+@app.get("/api/integrations/google/callback", response_class=HTMLResponse)
+async def google_callback(state: str, code: str):
+    try:
+        complete_google_oauth(state, code)
+    except ValueError as exc:
+        return HTMLResponse(f"<script>window.location='/?google=error&message={quote(str(exc))}'</script>")
+    return HTMLResponse("<script>window.location='/?google=connected'</script>")
+
+
+@app.get("/api/integrations/google/accounts", response_model=list[GoogleAccountResponse])
+async def google_accounts(user: dict = Depends(require_user)) -> list[GoogleAccountResponse]:
+    return [GoogleAccountResponse(**item) for item in list_google_accounts(user["username"])]
+
+
+@app.post("/api/integrations/google/aliases", response_model=GoogleAliasResponse)
+async def google_alias_create(payload: GoogleAliasCreate, user: dict = Depends(require_user)) -> GoogleAliasResponse:
+    try:
+        alias = create_google_alias(user["username"], payload.google_account_id, payload.name, payload.tag)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleAliasResponse(**alias)
+
+
+@app.get("/api/integrations/google/aliases", response_model=list[GoogleAliasResponse])
+async def google_aliases(user: dict = Depends(require_user)) -> list[GoogleAliasResponse]:
+    return [GoogleAliasResponse(**item) for item in list_google_aliases(user["username"])]
+
+
+@app.get("/api/integrations/google/messages", response_model=list[GoogleMessageResponse])
+async def google_messages(user: dict = Depends(require_user)) -> list[GoogleMessageResponse]:
+    return [GoogleMessageResponse(**item) for item in list_google_recent_messages(user["username"])]
+
+
+@app.post("/api/integrations/google/temp-alias", response_model=GoogleAliasResponse)
+async def google_temp_alias(user: dict = Depends(require_user)) -> GoogleAliasResponse:
+    try:
+        alias = create_temp_google_alias(user["username"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleAliasResponse(**alias)
+
+
+@app.delete("/api/integrations/google/accounts/{google_account_id}", response_model=DeleteResponse)
+async def google_account_delete(google_account_id: int, user: dict = Depends(require_user)) -> DeleteResponse:
+    return DeleteResponse(deleted=delete_google_account(user["username"], google_account_id))
+
+
 @app.get("/api/admin/users", response_model=list[UserResponse])
 async def admin_users(_: dict = Depends(require_admin)) -> list[UserResponse]:
     return [UserResponse(**item) for item in list_pending_users()]
@@ -166,6 +286,32 @@ async def admin_approve_personal_inbox(inbox_id: int, _: dict = Depends(require_
     if inbox is None:
         raise HTTPException(status_code=404, detail="Inbox not found")
     return InboxSummary(**inbox)
+
+
+@app.get("/api/admin/inboxes/all", response_model=list[AdminInboxSummary])
+async def admin_all_inboxes(_: dict = Depends(require_admin)) -> list[AdminInboxSummary]:
+    return [AdminInboxSummary(**item) for item in list_all_inboxes()]
+
+
+@app.get("/api/admin/messages/recent", response_model=list[AdminMessagePreview])
+async def admin_recent_messages(_: dict = Depends(require_admin)) -> list[AdminMessagePreview]:
+    return [AdminMessagePreview(**item) for item in list_all_messages()]
+
+
+@app.get("/api/admin/messages/{message_id}", response_model=AdminMessageDetail)
+async def admin_message_detail(message_id: int, _: dict = Depends(require_admin)) -> AdminMessageDetail:
+    message = get_admin_message(message_id)
+    if message is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return AdminMessageDetail(**message)
+
+
+@app.delete("/api/admin/messages/{message_id}", response_model=DeleteResponse)
+async def admin_remove_message(message_id: int, _: dict = Depends(require_admin)) -> DeleteResponse:
+    deleted = delete_admin_message(message_id)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return DeleteResponse(deleted=deleted)
 
 
 @app.get("/api/config", response_model=ConfigResponse)
@@ -218,20 +364,7 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     if payload.is_persistent and not inbox.is_persistent:
         inbox = set_inbox_persistent(address, user["username"], True) or inbox
-    return InboxResponse(
-        local_part=inbox.local_part,
-        domain=inbox.domain,
-        address=inbox.address,
-        profile_name=inbox.profile_name,
-        profile_type=inbox.profile_type,
-        inbox_mode=inbox.inbox_mode,
-        is_persistent=inbox.is_persistent,
-        requires_approval=inbox.requires_approval,
-        is_approved=inbox.is_approved,
-        approved_at=inbox.approved_at,
-        expires_at=inbox.expires_at,
-        created_at=inbox.created_at,
-    )
+    return inbox_response_payload(inbox)
 
 
 @app.get("/api/inboxes", response_model=list[InboxSummary])
@@ -252,7 +385,7 @@ async def get_inbox(address: str, user: dict = Depends(require_user)) -> InboxRe
         inbox = session.scalar(select(Inbox).where(Inbox.address == normalized, Inbox.owner_username == user["username"]))
         if inbox is None:
             raise HTTPException(status_code=404, detail="Inbox not found")
-        return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, inbox_mode=inbox.inbox_mode, is_persistent=inbox.is_persistent, requires_approval=inbox.requires_approval, is_approved=inbox.is_approved, approved_at=inbox.approved_at, expires_at=inbox.expires_at, created_at=inbox.created_at)
+        return inbox_response_payload(inbox)
 
 
 @app.patch("/api/inboxes/{address:path}", response_model=InboxResponse)
@@ -260,7 +393,7 @@ async def update_inbox(address: str, payload: InboxUpdate, user: dict = Depends(
     inbox = set_inbox_persistent(address, user["username"], payload.is_persistent)
     if inbox is None:
         raise HTTPException(status_code=404, detail="Inbox not found")
-    return InboxResponse(local_part=inbox.local_part, domain=inbox.domain, address=inbox.address, profile_name=inbox.profile_name, profile_type=inbox.profile_type, inbox_mode=inbox.inbox_mode, is_persistent=inbox.is_persistent, requires_approval=inbox.requires_approval, is_approved=inbox.is_approved, approved_at=inbox.approved_at, expires_at=inbox.expires_at, created_at=inbox.created_at)
+    return inbox_response_payload(inbox)
 
 
 @app.get("/api/messages/{message_id}", response_model=MessageDetail)
