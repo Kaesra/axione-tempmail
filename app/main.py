@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
@@ -202,7 +203,7 @@ async def google_callback(state: str, code: str):
     try:
         complete_google_oauth(state, code)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return HTMLResponse(f"<script>window.location='/?google=error&message={quote(str(exc))}'</script>")
     return HTMLResponse("<script>window.location='/?google=connected'</script>")
 
 

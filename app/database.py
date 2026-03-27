@@ -82,3 +82,9 @@ def init_db() -> None:
                 connection.execute(text("ALTER TABLE google_accounts ADD COLUMN token_expires_at DATETIME"))
             if "last_sync_at" not in google_account_columns:
                 connection.execute(text("ALTER TABLE google_accounts ADD COLUMN last_sync_at DATETIME"))
+        if "google_aliases" in google_account_tables:
+            google_alias_columns = {column["name"] for column in inspector.get_columns("google_aliases")}
+            if "is_temp" not in google_alias_columns:
+                connection.execute(text("ALTER TABLE google_aliases ADD COLUMN is_temp BOOLEAN DEFAULT 1"))
+            if "auto_generated" not in google_alias_columns:
+                connection.execute(text("ALTER TABLE google_aliases ADD COLUMN auto_generated BOOLEAN DEFAULT 1"))

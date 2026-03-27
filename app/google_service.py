@@ -27,6 +27,33 @@ GOOGLE_SCOPES = [
 ]
 
 
+def _generate_temp_tag() -> str:
+    return f"tm-{secrets.token_hex(4)}"
+
+
+def _ensure_auto_aliases(session, account_id: int) -> None:
+    aliases = session.scalars(select(GoogleAlias).where(GoogleAlias.google_account_id == account_id)).all()
+    current_tags = {alias.tag for alias in aliases}
+    target_count = max(50, settings.google_temp_alias_pool_size)
+    needed = max(0, target_count - len(aliases))
+    if needed <= 0:
+        return
+    for index in range(needed):
+        tag = _generate_temp_tag()
+        while tag in current_tags:
+            tag = _generate_temp_tag()
+        current_tags.add(tag)
+        session.add(
+            GoogleAlias(
+                google_account_id=account_id,
+                name=f"Temp Alias {len(aliases) + index + 1}",
+                tag=tag,
+                is_temp=True,
+                auto_generated=True,
+            )
+        )
+
+
 def _http_json(url: str, method: str = "GET", data: dict | None = None, headers: dict | None = None) -> dict:
     body = None
     merged_headers = {"Accept": "application/json"}
@@ -116,6 +143,8 @@ def _public_google_alias(alias: GoogleAlias, email: str) -> dict:
         "name": alias.name,
         "tag": alias.tag,
         "address": address,
+        "is_temp": alias.is_temp,
+        "auto_generated": alias.auto_generated,
         "created_at": alias.created_at,
     }
 
@@ -174,10 +203,6 @@ def complete_google_oauth(state: str, code: str) -> str:
             account = GoogleAccount(username=username, google_email=google_email, google_sub=google_sub)
             session.add(account)
             session.flush()
-            local_part = google_email.partition("@")[0]
-            session.add(GoogleAlias(google_account_id=account.id, name="Default", tag=""))
-            session.add(GoogleAlias(google_account_id=account.id, name="Verification", tag="verify"))
-            session.add(GoogleAlias(google_account_id=account.id, name="Testing", tag="test"))
         account.username = username
         account.google_email = google_email
         account.google_sub = google_sub
@@ -187,6 +212,7 @@ def complete_google_oauth(state: str, code: str) -> str:
         account.scopes = scopes
         account.token_expires_at = datetime.utcnow() + timedelta(seconds=max(expires_in - 60, 60))
         account.last_sync_at = account.last_sync_at or datetime.utcnow()
+        _ensure_auto_aliases(session, account.id)
         session.commit()
     return username
 
@@ -196,18 +222,24 @@ def list_google_accounts(username: str) -> list[dict]:
         accounts = session.scalars(select(GoogleAccount).where(GoogleAccount.username == username).order_by(GoogleAccount.created_at.desc())).all()
         results = []
         for account in accounts:
+            _ensure_auto_aliases(session, account.id)
             alias_count = session.query(GoogleAlias).filter(GoogleAlias.google_account_id == account.id).count()
             results.append(_public_google_account(account, alias_count))
+        session.commit()
         return results
 
 
 def list_google_aliases(username: str) -> list[dict]:
     with SessionLocal() as session:
+        accounts = session.scalars(select(GoogleAccount).where(GoogleAccount.username == username)).all()
+        for account in accounts:
+            _ensure_auto_aliases(session, account.id)
+        session.commit()
         rows = session.execute(
             select(GoogleAlias, GoogleAccount)
             .join(GoogleAccount, GoogleAccount.id == GoogleAlias.google_account_id)
             .where(GoogleAccount.username == username)
-            .order_by(GoogleAlias.created_at.desc())
+            .order_by(GoogleAlias.is_temp.desc(), GoogleAlias.created_at.desc())
         ).all()
         return [_public_google_alias(alias, account.google_email) for alias, account in rows]
 
@@ -224,7 +256,7 @@ def create_google_alias(username: str, google_account_id: int, name: str, tag: s
         existing = session.scalar(select(GoogleAlias).where(GoogleAlias.google_account_id == google_account_id, GoogleAlias.tag == normalized_tag))
         if existing is not None:
             raise ValueError("This alias tag already exists")
-        alias = GoogleAlias(google_account_id=google_account_id, name=normalized_name, tag=normalized_tag)
+        alias = GoogleAlias(google_account_id=google_account_id, name=normalized_name, tag=normalized_tag, is_temp=True, auto_generated=False)
         session.add(alias)
         session.commit()
         session.refresh(alias)

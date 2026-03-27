@@ -31,9 +31,9 @@
           <p class="mt-2 text-2xl font-semibold text-slate-900" x-text="googleAliases.length"></p>
         </div>
       </div>
-      <div class="rounded-2xl bg-white p-4 ring-1 ring-slate-200 text-sm leading-6 text-slate-600">
-        API key'lerini buradan olusturabilir, Google hesaplarini OAuth ile baglayabilir ve Gmail varyasyon adreslerini kullanicilar icin uretebilirsin.
-      </div>
+        <div class="rounded-2xl bg-white p-4 ring-1 ring-slate-200 text-sm leading-6 text-slate-600">
+        API key'lerini buradan olusturabilir, Google hesaplarini OAuth ile baglayabilir ve sistem tarafindan otomatik uretilecek genis temp Gmail alias havuzunu kullanicilar icin yonetebilirsin.
+        </div>
     </aside>
 
     <div class="space-y-5 max-h-[78vh] overflow-auto pr-1">
@@ -51,7 +51,7 @@
         <div class="rounded-[28px] border border-slate-200 p-5">
           <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Google Connect</p>
           <h3 class="mt-2 text-xl font-medium text-slate-900">Google hesaplarini bagla</h3>
-          <p class="mt-3 text-sm leading-6 text-slate-600">Kullanicilar sanki e-posta ile giris yapiyormus gibi kendi Gmail hesaplarini OAuth ile baglar. Sonra sistem mailleri takip eder ve `+tag` varyasyonlarini kullanir.</p>
+          <p class="mt-3 text-sm leading-6 text-slate-600">Kullanicilar sanki e-posta ile giris yapiyormus gibi kendi Gmail hesaplarini OAuth ile baglar. Baglanti tamamlaninca sistem tum mailbox akisi icin yuzlerce otomatik temp alias uretir ve havuz eksildikce kendini yeniden doldurur.</p>
           <div class="mt-4 flex flex-wrap gap-3">
             <button x-show="googleEnabled" @click="connectGoogleAccount()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800">Google Hesabi Bagla</button>
             <button x-show="googleEnabled" @click="loadGoogleMessages(); loadGoogleAliases(); loadGoogleAccounts()" class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Yenile</button>
@@ -121,7 +121,8 @@
 
         <div class="rounded-[28px] border border-slate-200 p-5">
           <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Alias Generator</p>
-          <h3 class="mt-2 text-xl font-medium text-slate-900">Gmail varyasyonu olustur</h3>
+          <h3 class="mt-2 text-xl font-medium text-slate-900">Gmail temp alias havuzu</h3>
+          <p class="mt-3 text-sm leading-6 text-slate-600">Bagli hesap gelince sistem otomatik olarak yuzlerce temp mail alias'i uretir. Bu modelde tum aktif alias'lar temp mail gibi kullanilir ve havuz azaldiginda sistem otomatik refill yapar.</p>
           <div class="mt-4 space-y-3">
             <select x-model="googleAliasForm.google_account_id" class="w-full rounded-2xl border-slate-200 text-sm focus:border-sky-500 focus:ring-sky-500">
               <option value="">Hesap sec</option>
@@ -131,7 +132,7 @@
             </select>
             <input x-model="googleAliasForm.name" type="text" placeholder="ornek: Netflix Signup" class="w-full rounded-2xl border-slate-200 text-sm focus:border-sky-500 focus:ring-sky-500">
             <input x-model="googleAliasForm.tag" type="text" placeholder="ornek: netflix" class="w-full rounded-2xl border-slate-200 text-sm focus:border-sky-500 focus:ring-sky-500">
-            <button @click="createGoogleAlias()" class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700">Alias Olustur</button>
+            <button @click="createGoogleAlias()" class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700">Ek Alias Olustur</button>
           </div>
           <div class="mt-5 space-y-3 max-h-[220px] overflow-auto pr-1">
             <template x-if="!googleAliases.length"><div class="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">Henuz alias yok.</div></template>
@@ -139,7 +140,11 @@
               <div class="rounded-2xl bg-slate-50 p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
-                    <p class="text-sm font-medium text-slate-900" x-text="alias.name"></p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm font-medium text-slate-900" x-text="alias.name"></p>
+                      <span x-show="alias.is_temp" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-700">Temp</span>
+                      <span x-show="alias.auto_generated" class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-700">Auto</span>
+                    </div>
                     <p class="mono mt-1 break-all text-xs text-slate-600" x-text="alias.address"></p>
                   </div>
                   <button @click="copyText(alias.address); setNotice('Alias kopyalandi', 'success')" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-white">Kopyala</button>

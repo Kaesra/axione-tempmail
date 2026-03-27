@@ -156,6 +156,8 @@ class GoogleAliasResponse(BaseModel):
     name: str
     tag: str
     address: str
+    is_temp: bool = True
+    auto_generated: bool = True
     created_at: datetime
 
 

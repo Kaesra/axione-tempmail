@@ -13,10 +13,13 @@ function mailDesk() {
     composeOpen: false,
     accountOpen: false,
     adminMonitorOpen: false,
+    accountTab: 'overview',
     composeError: '',
     apiKeyError: '',
     adminMonitorError: '',
     googleError: '',
+    authBusy: false,
+    googleConnectBusy: false,
     notice: { text: '', type: 'success' },
     inboxes: [],
     messages: [],
@@ -41,6 +44,7 @@ function mailDesk() {
     googleAliasForm: { google_account_id: '', name: '', tag: '' },
 
     async init() {
+      this.consumeQueryNotice()
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
@@ -92,22 +96,29 @@ function mailDesk() {
     },
 
     async register() {
+      if (this.authBusy) return
       this.auth.error = ''
       this.auth.message = ''
+      this.authBusy = true
       try {
         const payload = await this.api('/api/auth/register', { method: 'POST', body: JSON.stringify(this.auth.form) })
         this.auth.message = payload.message
+        this.auth.form.password = ''
         this.setNotice(payload.message, 'success')
         this.auth.mode = 'login'
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
+      } finally {
+        this.authBusy = false
       }
     },
 
     async login() {
+      if (this.authBusy) return
       this.auth.error = ''
       this.auth.message = ''
+      this.authBusy = true
       try {
         const payload = await this.api('/api/auth/login', { method: 'POST', body: JSON.stringify(this.auth.form) })
         this.auth.user = payload.user
@@ -127,6 +138,8 @@ function mailDesk() {
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
+      } finally {
+        this.authBusy = false
       }
     },
 
@@ -158,6 +171,7 @@ function mailDesk() {
     openAccount() {
       if (!this.auth.user) return
       this.accountOpen = true
+      this.accountTab = 'overview'
       this.apiKeyError = ''
       this.googleError = ''
       this.loadApiKeys()
@@ -168,6 +182,7 @@ function mailDesk() {
 
     closeAccount() {
       this.accountOpen = false
+      this.accountTab = 'overview'
       this.apiKeyError = ''
       this.googleError = ''
       this.apiKeyForm.name = ''
@@ -195,8 +210,17 @@ function mailDesk() {
 
     async connectGoogleAccount() {
       if (!this.auth.user || !this.googleEnabled) return
-      const payload = await this.api('/api/integrations/google/connect')
-      window.location.href = payload.url
+      this.googleError = ''
+      this.googleConnectBusy = true
+      try {
+        const payload = await this.api('/api/integrations/google/connect')
+        window.location.href = payload.url
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      } finally {
+        this.googleConnectBusy = false
+      }
     },
 
     async createGoogleAlias() {
@@ -507,6 +531,19 @@ function mailDesk() {
 
     setNotice(text, type = 'success') {
       this.notice = { text, type }
+    },
+
+    consumeQueryNotice() {
+      const params = new URLSearchParams(window.location.search)
+      const googleState = params.get('google')
+      const message = params.get('message')
+      if (googleState === 'connected') this.setNotice('Google hesabi basariyla baglandi', 'success')
+      if (googleState === 'error') this.setNotice(message || 'Google baglantisi tamamlanamadi', 'error')
+      if (!googleState && !message) return
+      params.delete('google')
+      params.delete('message')
+      const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`
+      window.history.replaceState({}, '', next)
     },
 
     normalizeError(value) {

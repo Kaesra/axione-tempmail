@@ -95,6 +95,8 @@ class GoogleAlias(Base):
     google_account_id: Mapped[int] = mapped_column(Integer, index=True)
     name: Mapped[str] = mapped_column(String(120), default="Default alias")
     tag: Mapped[str] = mapped_column(String(120), default="")
+    is_temp: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    auto_generated: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
