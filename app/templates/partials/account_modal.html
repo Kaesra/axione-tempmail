@@ -51,7 +51,7 @@
         <div class="rounded-[28px] border border-slate-200 p-5">
           <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Google Connect</p>
           <h3 class="mt-2 text-xl font-medium text-slate-900">Google hesaplarini bagla</h3>
-          <p class="mt-3 text-sm leading-6 text-slate-600">Kullanicilar sanki e-posta ile giris yapiyormus gibi kendi Gmail hesaplarini OAuth ile baglar. Baglanti tamamlaninca sistem tum mailbox akisi icin yuzlerce otomatik temp alias uretir ve havuz eksildikce kendini yeniden doldurur.</p>
+          <p class="mt-3 text-sm leading-6 text-slate-600">Kullanicilar kendi Gmail hesaplarini OAuth ile baglar. Sistem once nokta varyasyonlu `@googlemail.com` alias'lari dener, yetmedigi yerde `+tag` fallback kullanir; yine de bazi servisler bu varyasyonlari ayni hesap sayabilir.</p>
           <div class="mt-4 flex flex-wrap gap-3">
             <button x-show="googleEnabled" @click="connectGoogleAccount()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800">Google Hesabi Bagla</button>
             <button x-show="googleEnabled" @click="loadGoogleMessages(); loadGoogleAliases(); loadGoogleAccounts()" class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Yenile</button>

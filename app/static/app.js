@@ -28,6 +28,8 @@ function createMailDesk() {
     selectedMessageDetail: null,
     messageViewOpen: false,
     poller: null,
+    pollBusy: false,
+    lastInboxSyncAt: 0,
     pendingUsers: [],
     pendingPersonalInboxes: [],
     apiKeys: [],
@@ -37,6 +39,8 @@ function createMailDesk() {
     googleAccounts: [],
     googleAliases: [],
     googleMessages: [],
+    googleMessagesFetchedAt: 0,
+    googleMessagesRequest: null,
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
@@ -49,18 +53,25 @@ function createMailDesk() {
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
-        await this.fetchInboxes()
-        await this.loadApiKeys()
-        await this.loadGoogleAccounts()
-        await this.loadGoogleAliases()
-        await this.loadGoogleMessages()
-        if (this.auth.user.is_admin) {
-          await this.loadPendingUsers()
-          await this.loadPendingPersonalInboxes()
-          await this.loadAdminOverview()
-        }
+        await this.loadWorkspaceData()
       }
       this.startPolling()
+    },
+
+    async loadWorkspaceData() {
+      if (!this.auth.user) return
+      const tasks = [this.fetchInboxes(), this.loadApiKeys()]
+      if (this.googleEnabled) tasks.push(this.loadGoogleAccounts())
+      if (this.auth.user.is_admin) tasks.push(this.loadPendingUsers(), this.loadPendingPersonalInboxes())
+      await Promise.all(tasks)
+    },
+
+    async loadGoogleWorkspace({ includeAliases = false, includeMessages = false, forceMessages = false } = {}) {
+      if (!this.auth.user || !this.googleEnabled) return
+      const tasks = [this.loadGoogleAccounts()]
+      if (includeAliases) tasks.push(this.loadGoogleAliases())
+      if (includeMessages) tasks.push(this.loadGoogleMessages({ force: forceMessages }))
+      await Promise.all(tasks)
     },
 
     ensureValidDomain() {
@@ -150,16 +161,7 @@ function createMailDesk() {
         this.auth.form.password = ''
         this.ensureValidDomain()
         this.setNotice(`Hos geldin ${payload.user.username}`, 'success')
-        await this.fetchInboxes()
-        await this.loadApiKeys()
-        await this.loadGoogleAccounts()
-        await this.loadGoogleAliases()
-        await this.loadGoogleMessages()
-        if (this.auth.user && this.auth.user.is_admin) {
-          await this.loadPendingUsers()
-          await this.loadPendingPersonalInboxes()
-          await this.loadAdminOverview()
-        }
+        await this.loadWorkspaceData()
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
@@ -180,6 +182,8 @@ function createMailDesk() {
       this.googleAccounts = []
       this.googleAliases = []
       this.googleMessages = []
+      this.googleMessagesFetchedAt = 0
+      this.googleMessagesRequest = null
       this.selectedMessage = null
       this.selectedMessageDetail = null
       this.composeOpen = false
@@ -199,10 +203,7 @@ function createMailDesk() {
       this.accountTab = 'overview'
       this.apiKeyError = ''
       this.googleError = ''
-      this.loadApiKeys()
-      this.loadGoogleAccounts()
-      this.loadGoogleAliases()
-      this.loadGoogleMessages()
+      Promise.allSettled([this.loadApiKeys(), this.loadGoogleWorkspace({ includeAliases: true, includeMessages: true })])
     },
 
     closeAccount() {
@@ -233,12 +234,26 @@ function createMailDesk() {
       }
     },
 
-    async loadGoogleMessages() {
+    async loadGoogleMessages({ force = false } = {}) {
       if (!this.auth.user || !this.googleEnabled) return
+      if (!force && this.googleMessages.length && Date.now() - this.googleMessagesFetchedAt < 20000) return this.googleMessages
+      if (this.googleMessagesRequest) return this.googleMessagesRequest
+      this.googleMessagesRequest = (async () => {
+        try {
+          this.googleMessages = await this.api('/api/integrations/google/messages')
+          this.googleMessages = Array.isArray(this.googleMessages) ? this.googleMessages.map((item) => this.normalizeGoogleMessage(item)) : []
+          this.googleMessagesFetchedAt = Date.now()
+          this.mergeGoogleInbox()
+          return this.googleMessages
+        } catch (error) {
+          this.googleError = error.message
+          throw error
+        } finally {
+          this.googleMessagesRequest = null
+        }
+      })()
       try {
-        this.googleMessages = await this.api('/api/integrations/google/messages')
-        this.googleMessages = Array.isArray(this.googleMessages) ? this.googleMessages.map((item) => this.normalizeGoogleMessage(item)) : []
-        this.mergeGoogleInbox()
+        return await this.googleMessagesRequest
       } catch (error) {
         this.googleError = error.message
       }
@@ -279,7 +294,7 @@ function createMailDesk() {
       try {
         const alias = await this.api('/api/integrations/google/temp-alias', { method: 'POST' })
         await this.loadGoogleAliases()
-        await this.loadGoogleMessages()
+        await this.loadGoogleMessages({ force: true })
         this.form.domain = 'googlemail'
         this.composeOpen = false
         this.setNotice(`Google temp alias hazir: ${alias.address}`, 'success')
@@ -296,10 +311,7 @@ function createMailDesk() {
       this.composeOpen = true
       this.ensureValidDomain()
       try {
-        if (this.googleEnabled && this.auth.user) {
-          await this.loadGoogleAccounts()
-          await this.loadGoogleAliases()
-        }
+        if (this.googleEnabled && this.auth.user) await this.loadGoogleWorkspace({ includeAliases: true })
         const domains = this.availableDomains()
         if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
         if (this.form.domain === 'googlemail') {
@@ -318,9 +330,8 @@ function createMailDesk() {
       this.googleError = ''
       try {
         await this.api(`/api/integrations/google/accounts/${accountId}`, { method: 'DELETE' })
-        await this.loadGoogleAccounts()
-        await this.loadGoogleAliases()
-        await this.loadGoogleMessages()
+        this.googleMessagesFetchedAt = 0
+        await this.loadGoogleWorkspace({ includeAliases: true, includeMessages: true, forceMessages: true })
         this.setNotice('Google hesap baglantisi kaldirildi', 'success')
       } catch (error) {
         this.googleError = error.message
@@ -378,8 +389,12 @@ function createMailDesk() {
 
     async loadAdminOverview() {
       if (!this.auth.user || !this.auth.user.is_admin) return
-      this.adminInboxes = await this.api('/api/admin/inboxes/all')
-      this.adminMessages = await this.api('/api/admin/messages/recent')
+      const [adminInboxes, adminMessages] = await Promise.all([
+        this.api('/api/admin/inboxes/all'),
+        this.api('/api/admin/messages/recent'),
+      ])
+      this.adminInboxes = adminInboxes
+      this.adminMessages = adminMessages
     },
 
     openAdminMonitor() {
@@ -419,11 +434,12 @@ function createMailDesk() {
       }
     },
 
-    async fetchInboxes() {
+    async fetchInboxes({ allowSelect = true } = {}) {
       if (!this.auth.user) return
       this.inboxes = await this.api('/api/inboxes')
+      this.lastInboxSyncAt = Date.now()
       this.mergeGoogleInbox()
-      if (!this.activeInbox && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address)
+      if (!this.activeInbox && allowSelect && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address, { syncInboxes: false })
       else if (this.activeInbox) {
         const fresh = this.inboxes.find((item) => item.address === this.activeInbox.address)
         if (fresh) this.activeInbox = fresh
@@ -454,26 +470,26 @@ function createMailDesk() {
         this.form.isPersistent = false
         this.composeOpen = false
         this.setNotice(inbox.inbox_mode === 'personal' ? `Kisisel inbox talebi olusturuldu: ${inbox.address}` : `Temp inbox olusturuldu: ${inbox.address}`, 'success')
-        await this.fetchInboxes()
-        await this.selectInbox(inbox.address)
+        await this.fetchInboxes({ allowSelect: false })
+        await this.selectInbox(inbox.address, { syncInboxes: false })
       } catch (error) {
         this.composeError = error.message
         this.setNotice(error.message, 'error')
       }
     },
 
-    async selectInbox(address) {
+    async selectInbox(address, options = {}) {
       this.messageViewOpen = false
       if (address === 'googlemail://connected') {
         this.activeInbox = this.googleInboxSummary()
-        await this.refreshMessages()
+        await this.refreshMessages(options)
         return
       }
       this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`)
-      await this.refreshMessages()
+      await this.refreshMessages(options)
     },
 
-    async refreshMessages() {
+    async refreshMessages({ syncInboxes = true } = {}) {
       if (!this.activeInbox || !this.auth.user) return
       if (this.activeInbox.address === 'googlemail://connected') {
         await this.loadGoogleMessages()
@@ -498,7 +514,7 @@ function createMailDesk() {
       }
       const payload = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`)
       this.messages = Array.isArray(payload) ? payload.map((item) => this.normalizeMessage(item)) : []
-      await this.fetchInboxes()
+      if (syncInboxes) await this.fetchInboxes({ allowSelect: false })
       if (!this.messages.length) {
         this.selectedMessage = null
         this.selectedMessageDetail = null
@@ -528,7 +544,7 @@ function createMailDesk() {
       this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail
       this.messageViewOpen = true
       if (this.selectedMessage) this.selectedMessage.is_unread = false
-      await this.fetchInboxes()
+      await this.fetchInboxes({ allowSelect: false })
     },
 
     closeMessageView() {
@@ -540,7 +556,7 @@ function createMailDesk() {
       if (!this.activeInbox) return
       const updated = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}`, { method: 'PATCH', body: JSON.stringify({ is_persistent: !this.activeInbox.is_persistent }) })
       this.activeInbox = updated
-      await this.fetchInboxes()
+      await this.fetchInboxes({ allowSelect: false })
     },
 
     async toggleSelectedUnread() {
@@ -554,7 +570,7 @@ function createMailDesk() {
       if (index >= 0) this.messages[index] = { ...this.messages[index], ...updated }
       this.selectedMessage = { ...(this.selectedMessage || {}), ...updated }
       if (this.selectedMessageDetail) this.selectedMessageDetail.is_unread = updated.is_unread
-      await this.fetchInboxes()
+      await this.fetchInboxes({ allowSelect: false })
     },
 
     async purgeInbox() {
@@ -600,12 +616,21 @@ function createMailDesk() {
 
     startPolling() {
       clearInterval(this.poller)
-      this.poller = setInterval(() => {
-        if (this.activeInbox && this.auth.user) this.refreshMessages()
-        if (this.auth.user && this.auth.user.is_admin) {
-          this.loadPendingUsers()
-          this.loadPendingPersonalInboxes()
-          this.loadAdminOverview()
+      this.poller = setInterval(async () => {
+        if (!this.auth.user || this.pollBusy) return
+        this.pollBusy = true
+        try {
+          if (this.activeInbox) await this.refreshMessages({ syncInboxes: false })
+          if (Date.now() - this.lastInboxSyncAt > 30000) await this.fetchInboxes({ allowSelect: false })
+          if (this.auth.user.is_admin) {
+            const adminTasks = [this.loadPendingUsers(), this.loadPendingPersonalInboxes()]
+            if (this.adminMonitorOpen) adminTasks.push(this.loadAdminOverview())
+            await Promise.all(adminTasks)
+          }
+        } catch (error) {
+          console.error('Polling failed', error)
+        } finally {
+          this.pollBusy = false
         }
       }, this.pollSeconds * 1000)
     },
@@ -634,7 +659,7 @@ function createMailDesk() {
     },
 
     previewInboxAddress() {
-      if (this.form.domain === 'googlemail') return 'otomatik+tm-xxxx@gmail.com'
+      if (this.form.domain === 'googlemail') return 'otomatik.gmail.alias@googlemail.com'
       const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
       const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
       return `${local}@${domain}`

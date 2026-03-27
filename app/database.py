@@ -88,3 +88,10 @@ def init_db() -> None:
                 connection.execute(text("ALTER TABLE google_aliases ADD COLUMN is_temp BOOLEAN DEFAULT 1"))
             if "auto_generated" not in google_alias_columns:
                 connection.execute(text("ALTER TABLE google_aliases ADD COLUMN auto_generated BOOLEAN DEFAULT 1"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_owner_expires_created ON inboxes (owner_username, expires_at, created_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_inboxes_expires_persistent_created ON inboxes (expires_at, is_persistent, created_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_inbox_received ON messages (inbox_address, received_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_inbox_unread ON messages (inbox_address, is_unread)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_inbox_kind ON messages (inbox_address, message_kind)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_google_accounts_username_created ON google_accounts (username, created_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_google_aliases_account_created ON google_aliases (google_account_id, created_at)"))

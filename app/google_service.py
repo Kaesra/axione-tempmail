@@ -19,6 +19,8 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_GMAIL_PROFILE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/profile"
 GOOGLE_GMAIL_MESSAGES_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
 GOOGLE_GMAIL_MESSAGE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}?format=full"
+LOCAL_ALIAS_PREFIX = "local:"
+GOOGLE_MESSAGE_CACHE_TTL_SECONDS = 20
 GOOGLE_SCOPES = [
     "openid",
     "email",
@@ -26,12 +28,68 @@ GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
+_google_message_cache: dict[tuple[str, int], tuple[datetime, list[dict]]] = {}
+
 
 def _generate_temp_tag() -> str:
     return f"tm-{secrets.token_hex(4)}"
 
 
+def _gmail_base_local_part(email: str) -> str:
+    local_part, _, domain = email.partition("@")
+    if domain.lower() != "gmail.com":
+        return ""
+    compact = local_part.replace(".", "").strip().lower()
+    if len(compact) < 2 or not compact.isalnum():
+        return ""
+    return compact
+
+
+def _iter_gmail_dot_aliases(base_local_part: str):
+    slots = len(base_local_part) - 1
+    if slots <= 0:
+        return
+    upper_bound = (1 << slots) - 1 if slots < 20 else 4095
+    for mask in range(1, upper_bound + 1):
+        candidate = [base_local_part[0]]
+        for index, char in enumerate(base_local_part[1:]):
+            if mask & (1 << index):
+                candidate.append(".")
+            candidate.append(char)
+        yield "".join(candidate)
+
+
+def _next_google_alias_tag(email: str, existing_tags: set[str]) -> str:
+    base_local_part = _gmail_base_local_part(email)
+    if base_local_part:
+        for dotted_local_part in _iter_gmail_dot_aliases(base_local_part):
+            encoded = f"{LOCAL_ALIAS_PREFIX}{dotted_local_part}"
+            if encoded not in existing_tags:
+                return encoded
+    tag = _generate_temp_tag()
+    while tag in existing_tags:
+        tag = _generate_temp_tag()
+    return tag
+
+
+def _alias_address(email: str, tag: str) -> str:
+    local_part, _, domain = email.partition("@")
+    alias_domain = "googlemail.com" if domain.lower() == "gmail.com" else domain
+    if tag.startswith(LOCAL_ALIAS_PREFIX):
+        return f"{tag[len(LOCAL_ALIAS_PREFIX):]}@{alias_domain}"
+    return f"{local_part}+{tag}@{alias_domain}" if tag else email
+
+
+def _clear_google_message_cache(username: str) -> None:
+    stale_keys = [key for key in _google_message_cache if key[0] == username]
+    for key in stale_keys:
+        _google_message_cache.pop(key, None)
+
+
 def _ensure_auto_aliases(session, account_id: int) -> None:
+    account = session.scalar(select(GoogleAccount).where(GoogleAccount.id == account_id))
+    if account is None:
+        return
     aliases = session.scalars(select(GoogleAlias).where(GoogleAlias.google_account_id == account_id)).all()
     current_tags = {alias.tag for alias in aliases}
     target_count = max(50, settings.google_temp_alias_pool_size)
@@ -39,9 +97,7 @@ def _ensure_auto_aliases(session, account_id: int) -> None:
     if needed <= 0:
         return
     for index in range(needed):
-        tag = _generate_temp_tag()
-        while tag in current_tags:
-            tag = _generate_temp_tag()
+        tag = _next_google_alias_tag(account.google_email, current_tags)
         current_tags.add(tag)
         session.add(
             GoogleAlias(
@@ -135,8 +191,7 @@ def _public_google_account(account: GoogleAccount, alias_count: int = 0) -> dict
 
 
 def _public_google_alias(alias: GoogleAlias, email: str) -> dict:
-    local_part, _, domain = email.partition("@")
-    address = f"{local_part}+{alias.tag}@{domain}" if alias.tag else email
+    address = _alias_address(email, alias.tag)
     return {
         "id": alias.id,
         "google_account_id": alias.google_account_id,
@@ -214,6 +269,7 @@ def complete_google_oauth(state: str, code: str) -> str:
         account.last_sync_at = account.last_sync_at or datetime.utcnow()
         _ensure_auto_aliases(session, account.id)
         session.commit()
+    _clear_google_message_cache(username)
     return username
 
 
@@ -249,6 +305,10 @@ def create_google_alias(username: str, google_account_id: int, name: str, tag: s
     normalized_tag = "".join(ch for ch in tag.strip().lower() if ch.isalnum() or ch in {"-", "_", "."})[:120]
     if not normalized_name:
         raise ValueError("Alias name is required")
+    if not normalized_tag:
+        raise ValueError("Alias tag is required")
+    if normalized_tag.startswith(LOCAL_ALIAS_PREFIX):
+        raise ValueError("This alias tag is reserved")
     with SessionLocal() as session:
         account = session.scalar(select(GoogleAccount).where(GoogleAccount.id == google_account_id, GoogleAccount.username == username))
         if account is None:
@@ -260,6 +320,7 @@ def create_google_alias(username: str, google_account_id: int, name: str, tag: s
         session.add(alias)
         session.commit()
         session.refresh(alias)
+        _clear_google_message_cache(username)
         return _public_google_alias(alias, account.google_email)
 
 
@@ -268,9 +329,8 @@ def create_temp_google_alias(username: str) -> dict:
         account = session.scalar(select(GoogleAccount).where(GoogleAccount.username == username).order_by(GoogleAccount.created_at.desc()))
         if account is None:
             raise ValueError("Connect a Google account first")
-        tag = _generate_temp_tag()
-        while session.scalar(select(GoogleAlias).where(GoogleAlias.google_account_id == account.id, GoogleAlias.tag == tag)) is not None:
-            tag = _generate_temp_tag()
+        existing_tags = {item.tag for item in session.scalars(select(GoogleAlias).where(GoogleAlias.google_account_id == account.id)).all()}
+        tag = _next_google_alias_tag(account.google_email, existing_tags)
         existing_count = session.query(GoogleAlias).filter(GoogleAlias.google_account_id == account.id).count()
         alias = GoogleAlias(
             google_account_id=account.id,
@@ -284,6 +344,7 @@ def create_temp_google_alias(username: str) -> dict:
         session.refresh(alias)
         _ensure_auto_aliases(session, account.id)
         session.commit()
+        _clear_google_message_cache(username)
         return _public_google_alias(alias, account.google_email)
 
 
@@ -295,6 +356,7 @@ def delete_google_account(username: str, google_account_id: int) -> int:
         session.execute(delete(GoogleAlias).where(GoogleAlias.google_account_id == google_account_id))
         session.delete(account)
         session.commit()
+        _clear_google_message_cache(username)
         return 1
 
 
@@ -314,11 +376,22 @@ def _valid_access_token(account: GoogleAccount) -> str:
 
 
 def list_google_recent_messages(username: str, limit: int = 20) -> list[dict]:
+    cache_key = (username, limit)
+    cached = _google_message_cache.get(cache_key)
+    now = datetime.utcnow()
+    if cached and (now - cached[0]).total_seconds() < GOOGLE_MESSAGE_CACHE_TTL_SECONDS:
+        return cached[1]
+
     with SessionLocal() as session:
         accounts = session.scalars(select(GoogleAccount).where(GoogleAccount.username == username).order_by(GoogleAccount.created_at.desc())).all()
         items: list[dict] = []
         for account in accounts:
             access_token = _valid_access_token(account)
+            aliases = session.scalars(select(GoogleAlias).where(GoogleAlias.google_account_id == account.id)).all()
+            alias_name_by_address = {
+                _public_google_alias(alias, account.google_email)["address"].lower(): alias.name
+                for alias in aliases
+            }
             list_payload = _http_json(
                 f"{GOOGLE_GMAIL_MESSAGES_URL}?maxResults={max(1, min(limit, 20))}",
                 headers={"Authorization": f"Bearer {access_token}"},
@@ -336,12 +409,7 @@ def list_google_recent_messages(username: str, limit: int = 20) -> list[dict]:
                 received_at = detail.get("internalDate")
                 body = _decode_body(payload)
                 _, to_email = parseaddr(to_value)
-                matched_alias = ""
-                aliases = session.scalars(select(GoogleAlias).where(GoogleAlias.google_account_id == account.id)).all()
-                for alias in aliases:
-                    if _public_google_alias(alias, account.google_email)["address"].lower() == to_email.lower():
-                        matched_alias = alias.name
-                        break
+                matched_alias = alias_name_by_address.get((to_email or to_value).lower(), "")
                 items.append(
                     {
                         "id": f"google-{account.id}-{entry.get('id', '')}",
@@ -359,4 +427,6 @@ def list_google_recent_messages(username: str, limit: int = 20) -> list[dict]:
             account.last_sync_at = datetime.utcnow()
         session.commit()
     items.sort(key=lambda item: item.get("received_at") or "", reverse=True)
-    return items[:limit]
+    result = items[:limit]
+    _google_message_cache[cache_key] = (now, result)
+    return result

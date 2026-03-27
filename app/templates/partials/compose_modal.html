@@ -81,7 +81,7 @@
         <div class="mt-4 grid gap-3 text-sm text-slate-300">
           <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'temp'">Temp kutular `{{ temp_inbox_minutes }}` dakika aktif kalir.</p>
           <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'personal'">Kisisel kutular admin onayi ile aktif olur.</p>
-          <p x-show="form.domain === 'googlemail'">Googlemail kutusu secildiginde yeni bir Gmail temp alias ayirilir ve ortak Googlemail inbox'ina yonlendirilirsin.</p>
+          <p x-show="form.domain === 'googlemail'">Googlemail kutusu secildiginde yeni bir Gmail alias ayrilir ve ortak Googlemail inbox'ina yonlendirilirsin.</p>
         </div>
       </div>
 
@@ -89,7 +89,7 @@
         <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Rules</p>
         <div class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
           <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'temp'">Normal kullanicilar icin gunluk temp limit `{{ temp_daily_limit }}` adettir. Admin tarafinda bu limit uygulanmaz.</p>
-          <p x-show="form.domain === 'googlemail'">Googlemail secenegi ancak en az bir Google hesap baglandiysa gorunur. Alias havuzu otomatik refill ile genis tutulur.</p>
+          <p x-show="form.domain === 'googlemail'">Googlemail secenegi ancak en az bir Google hesap baglandiysa gorunur. Sistem once nokta varyasyonlu `@googlemail.com` alias uretir, gerekirse `+tag` fallback kullanir; bazi siteler yine de Gmail varyasyonlarini ayni hesap sayabilir.</p>
           <p>Mailbox seciminden sonra mesaj paneli otomatik olarak ilgili inbox'a gecer.</p>
         </div>
       </div>
