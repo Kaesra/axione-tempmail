@@ -35,6 +35,9 @@ class Settings:
     secure_cookies: bool = _bool("TEMPMAIL_SECURE_COOKIES", False)
     admin_username: str = os.getenv("TEMPMAIL_ADMIN_USERNAME", "admin")
     admin_password: str = os.getenv("TEMPMAIL_ADMIN_PASSWORD", "change-me-now")
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    google_oauth_redirect_uri: str = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8080/api/integrations/google/callback")
 
     @property
     def accepted_domains(self) -> list[str]:

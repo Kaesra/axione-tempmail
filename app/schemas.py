@@ -136,6 +136,46 @@ class AdminMessageDetail(AdminMessagePreview):
     raw_headers: str
 
 
+class GoogleAccountResponse(BaseModel):
+    id: int
+    google_email: str
+    created_at: datetime
+    last_sync_at: datetime | None = None
+    alias_count: int = 0
+
+
+class GoogleAliasCreate(BaseModel):
+    google_account_id: int
+    name: str = Field(min_length=1, max_length=120)
+    tag: str = Field(default="", max_length=120)
+
+
+class GoogleAliasResponse(BaseModel):
+    id: int
+    google_account_id: int
+    name: str
+    tag: str
+    address: str
+    created_at: datetime
+
+
+class GoogleConnectResponse(BaseModel):
+    url: str
+
+
+class GoogleMessageResponse(BaseModel):
+    id: str
+    google_account_id: int
+    google_email: str
+    subject: str
+    mail_from: str
+    to_address: str
+    alias_name: str
+    snippet: str
+    body: str
+    received_at: datetime | None = None
+
+
 class PersonalInboxApproval(BaseModel):
     id: int
     address: str

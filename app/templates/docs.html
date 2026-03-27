@@ -180,6 +180,10 @@
                   <p class="text-lg font-semibold text-slate-900">API key var mi?</p>
                   <p class="mt-2 text-sm leading-6 text-slate-600">Evet. Kullanici hesabindan API key olusturabilir, tekrar kopyalayabilir ve istersen iptal edebilirsin. API hem `X-API-Key` hem `Authorization: Bearer` ile calisir.</p>
                 </div>
+                <div class="rounded-3xl bg-slate-50 p-5 lg:col-span-2">
+                  <p class="text-lg font-semibold text-slate-900">Google hesap baglama var mi?</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Evet. Kullanici kendi Gmail hesabini OAuth ile baglar. Sistem son mailleri takip eder ve `isim+tag@gmail.com` formatinda Gmail varyasyon adresleri uretebilir. Boylece kullanici mail ile giris yapiyormus gibi kendi Gmail hesabini sisteme bagislar.</p>
+                </div>
               </div>
 
               <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-[#0f172a] text-slate-100">
@@ -190,7 +194,12 @@ POST /api/auth/logout
 GET  /api/auth/me
 GET  /api/auth/api-keys
 POST /api/auth/api-keys
-DELETE /api/auth/api-keys/{id}</code></pre>
+DELETE /api/auth/api-keys/{id}
+GET  /api/integrations/google/connect
+GET  /api/integrations/google/accounts
+GET  /api/integrations/google/aliases
+POST /api/integrations/google/aliases
+GET  /api/integrations/google/messages</code></pre>
               </div>
             </section>
 

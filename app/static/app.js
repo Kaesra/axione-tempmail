@@ -6,6 +6,7 @@ function mailDesk() {
     pollSeconds: initial.pollSeconds,
     tempInboxMinutes: initial.tempInboxMinutes || 5,
     tempDailyLimit: initial.tempDailyLimit || 3,
+    googleEnabled: Boolean(initial.googleEnabled),
     currentUser: initial.currentUser,
     adminUsername: initial.adminUsername || 'admin',
     search: '',
@@ -15,6 +16,7 @@ function mailDesk() {
     composeError: '',
     apiKeyError: '',
     adminMonitorError: '',
+    googleError: '',
     notice: { text: '', type: 'success' },
     inboxes: [],
     messages: [],
@@ -29,10 +31,14 @@ function mailDesk() {
     adminInboxes: [],
     adminMessages: [],
     adminSelectedMessage: null,
+    googleAccounts: [],
+    googleAliases: [],
+    googleMessages: [],
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
     apiKeyForm: { name: '' },
+    googleAliasForm: { google_account_id: '', name: '', tag: '' },
 
     async init() {
       await this.loadMe()
@@ -40,6 +46,9 @@ function mailDesk() {
         this.ensureValidDomain()
         await this.fetchInboxes()
         await this.loadApiKeys()
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
         if (this.auth.user.is_admin) {
           await this.loadPendingUsers()
           await this.loadPendingPersonalInboxes()
@@ -107,6 +116,9 @@ function mailDesk() {
         this.setNotice(`Hos geldin ${payload.user.username}`, 'success')
         await this.fetchInboxes()
         await this.loadApiKeys()
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
         if (this.auth.user && this.auth.user.is_admin) {
           await this.loadPendingUsers()
           await this.loadPendingPersonalInboxes()
@@ -127,6 +139,9 @@ function mailDesk() {
       this.adminInboxes = []
       this.adminMessages = []
       this.adminSelectedMessage = null
+      this.googleAccounts = []
+      this.googleAliases = []
+      this.googleMessages = []
       this.selectedMessage = null
       this.selectedMessageDetail = null
       this.composeOpen = false
@@ -144,13 +159,73 @@ function mailDesk() {
       if (!this.auth.user) return
       this.accountOpen = true
       this.apiKeyError = ''
+      this.googleError = ''
       this.loadApiKeys()
+      this.loadGoogleAccounts()
+      this.loadGoogleAliases()
+      this.loadGoogleMessages()
     },
 
     closeAccount() {
       this.accountOpen = false
       this.apiKeyError = ''
+      this.googleError = ''
       this.apiKeyForm.name = ''
+    },
+
+    async loadGoogleAccounts() {
+      if (!this.auth.user || !this.googleEnabled) return
+      this.googleAccounts = await this.api('/api/integrations/google/accounts')
+      if (!this.googleAliasForm.google_account_id && this.googleAccounts[0]) this.googleAliasForm.google_account_id = this.googleAccounts[0].id
+    },
+
+    async loadGoogleAliases() {
+      if (!this.auth.user || !this.googleEnabled) return
+      this.googleAliases = await this.api('/api/integrations/google/aliases')
+    },
+
+    async loadGoogleMessages() {
+      if (!this.auth.user || !this.googleEnabled) return
+      try {
+        this.googleMessages = await this.api('/api/integrations/google/messages')
+      } catch (error) {
+        this.googleError = error.message
+      }
+    },
+
+    async connectGoogleAccount() {
+      if (!this.auth.user || !this.googleEnabled) return
+      const payload = await this.api('/api/integrations/google/connect')
+      window.location.href = payload.url
+    },
+
+    async createGoogleAlias() {
+      this.googleError = ''
+      try {
+        const payload = await this.api('/api/integrations/google/aliases', { method: 'POST', body: JSON.stringify(this.googleAliasForm) })
+        this.googleAliases = [payload, ...this.googleAliases]
+        this.googleAliasForm.name = ''
+        this.googleAliasForm.tag = ''
+        this.setNotice('Google alias olusturuldu', 'success')
+        await this.loadGoogleAccounts()
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async disconnectGoogleAccount(accountId) {
+      this.googleError = ''
+      try {
+        await this.api(`/api/integrations/google/accounts/${accountId}`, { method: 'DELETE' })
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
+        this.setNotice('Google hesap baglantisi kaldirildi', 'success')
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
     },
 
     async createApiKey() {

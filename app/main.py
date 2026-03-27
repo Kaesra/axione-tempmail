@@ -26,6 +26,7 @@ from app.auth_service import (
 )
 from app.config import settings
 from app.database import SessionLocal, init_db
+from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
 from app.mail_service import (
     approve_personal_inbox,
     cleanup_expired_messages,
@@ -49,7 +50,7 @@ from app.mail_service import (
     temp_inbox_creations_today,
 )
 from app.models import Inbox
-from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
+from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, GoogleAccountResponse, GoogleAliasCreate, GoogleAliasResponse, GoogleConnectResponse, GoogleMessageResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -111,6 +112,7 @@ async def index(request: Request):
             "temp_daily_limit": settings.temp_daily_limit,
             "current_user": template_user_payload(current_user),
             "admin_username": settings.admin_username,
+            "google_enabled": google_enabled(),
         },
     )
 
@@ -184,6 +186,53 @@ async def auth_revoke_api_key(api_key_id: int, user: dict = Depends(require_user
     if api_key is None:
         raise HTTPException(status_code=404, detail="API key not found")
     return ApiKeyResponse(**api_key)
+
+
+@app.get("/api/integrations/google/connect", response_model=GoogleConnectResponse)
+async def google_connect(user: dict = Depends(require_user)) -> GoogleConnectResponse:
+    try:
+        url = create_google_oauth_url(user["username"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleConnectResponse(url=url)
+
+
+@app.get("/api/integrations/google/callback", response_class=HTMLResponse)
+async def google_callback(state: str, code: str):
+    try:
+        complete_google_oauth(state, code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return HTMLResponse("<script>window.location='/?google=connected'</script>")
+
+
+@app.get("/api/integrations/google/accounts", response_model=list[GoogleAccountResponse])
+async def google_accounts(user: dict = Depends(require_user)) -> list[GoogleAccountResponse]:
+    return [GoogleAccountResponse(**item) for item in list_google_accounts(user["username"])]
+
+
+@app.post("/api/integrations/google/aliases", response_model=GoogleAliasResponse)
+async def google_alias_create(payload: GoogleAliasCreate, user: dict = Depends(require_user)) -> GoogleAliasResponse:
+    try:
+        alias = create_google_alias(user["username"], payload.google_account_id, payload.name, payload.tag)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleAliasResponse(**alias)
+
+
+@app.get("/api/integrations/google/aliases", response_model=list[GoogleAliasResponse])
+async def google_aliases(user: dict = Depends(require_user)) -> list[GoogleAliasResponse]:
+    return [GoogleAliasResponse(**item) for item in list_google_aliases(user["username"])]
+
+
+@app.get("/api/integrations/google/messages", response_model=list[GoogleMessageResponse])
+async def google_messages(user: dict = Depends(require_user)) -> list[GoogleMessageResponse]:
+    return [GoogleMessageResponse(**item) for item in list_google_recent_messages(user["username"])]
+
+
+@app.delete("/api/integrations/google/accounts/{google_account_id}", response_model=DeleteResponse)
+async def google_account_delete(google_account_id: int, user: dict = Depends(require_user)) -> DeleteResponse:
+    return DeleteResponse(deleted=delete_google_account(user["username"], google_account_id))
 
 
 @app.get("/api/admin/users", response_model=list[UserResponse])

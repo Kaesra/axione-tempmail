@@ -23,6 +23,7 @@ def init_db() -> None:
     inspector = inspect(engine)
     inbox_columns = {column["name"] for column in inspector.get_columns("inboxes")}
     message_columns = {column["name"] for column in inspector.get_columns("messages")}
+    google_account_tables = set(inspector.get_table_names())
     with engine.begin() as connection:
         if "local_part" not in inbox_columns:
             connection.execute(text("ALTER TABLE inboxes ADD COLUMN local_part VARCHAR(120) DEFAULT ''"))
@@ -73,3 +74,11 @@ def init_db() -> None:
         connection.execute(text("UPDATE inboxes SET inbox_mode = 'personal' WHERE profile_type = 'personal' AND (inbox_mode = '' OR inbox_mode IS NULL OR inbox_mode = 'temp')"))
         connection.execute(text("UPDATE inboxes SET inbox_mode = 'temp' WHERE inbox_mode = '' OR inbox_mode IS NULL"))
         connection.execute(text("UPDATE inboxes SET is_approved = 1 WHERE is_approved IS NULL"))
+        if "google_accounts" in google_account_tables:
+            google_account_columns = {column["name"] for column in inspector.get_columns("google_accounts")}
+            if "scopes" not in google_account_columns:
+                connection.execute(text("ALTER TABLE google_accounts ADD COLUMN scopes TEXT DEFAULT ''"))
+            if "token_expires_at" not in google_account_columns:
+                connection.execute(text("ALTER TABLE google_accounts ADD COLUMN token_expires_at DATETIME"))
+            if "last_sync_at" not in google_account_columns:
+                connection.execute(text("ALTER TABLE google_accounts ADD COLUMN last_sync_at DATETIME"))

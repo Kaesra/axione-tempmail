@@ -64,6 +64,40 @@ class ApiKey(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
 
+class GoogleOAuthState(Base):
+    __tablename__ = "google_oauth_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(120), index=True)
+    state: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class GoogleAccount(Base):
+    __tablename__ = "google_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(120), index=True)
+    google_email: Mapped[str] = mapped_column(String(255), index=True)
+    google_sub: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    access_token: Mapped[str] = mapped_column(Text, default="")
+    refresh_token: Mapped[str] = mapped_column(Text, default="")
+    scopes: Mapped[str] = mapped_column(Text, default="")
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class GoogleAlias(Base):
+    __tablename__ = "google_aliases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    google_account_id: Mapped[int] = mapped_column(Integer, index=True)
+    name: Mapped[str] = mapped_column(String(120), default="Default alias")
+    tag: Mapped[str] = mapped_column(String(120), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class Message(Base):
     __tablename__ = "messages"
 
