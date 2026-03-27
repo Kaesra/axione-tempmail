@@ -11,20 +11,20 @@
   </div>
   <div class="space-y-4 px-4 py-4">
     <div x-show="composeError" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="composeError"></div>
-    <div>
+    <div :class="form.domain === 'googlemail' ? 'opacity-60 pointer-events-none' : ''">
       <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Inbox Turu</label>
       <div class="grid gap-2 sm:grid-cols-2">
-        <button @click="form.inboxMode = 'temp'; form.isPersistent = false" type="button" :class="form.inboxMode === 'temp' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-xl border px-4 py-3 text-left">
+        <button @click="form.inboxMode = 'temp'; form.isPersistent = false" type="button" :disabled="form.domain === 'googlemail'" :class="form.inboxMode === 'temp' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed">
           <p class="text-sm font-medium">Temp Mail</p>
           <p class="mt-1 text-xs text-slate-500">5 dakikalik, hizli dogrulama icin.</p>
         </button>
-        <button @click="form.inboxMode = 'personal'; form.isPersistent = true" type="button" :class="form.inboxMode === 'personal' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-xl border px-4 py-3 text-left">
+        <button @click="form.inboxMode = 'personal'; form.isPersistent = true" type="button" :disabled="form.domain === 'googlemail'" :class="form.inboxMode === 'personal' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed">
           <p class="text-sm font-medium">Kisisel</p>
           <p class="mt-1 text-xs text-slate-500">Admin onayi sonrasi kalici kullanim.</p>
         </button>
       </div>
     </div>
-    <div>
+    <div x-show="form.domain !== 'googlemail'">
       <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Profil Adi</label>
       <input x-model="form.profileName" type="text" placeholder="ornek: TikTok Profilim" class="w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
     </div>
@@ -39,19 +39,19 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <label class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Domain</label>
-        <span class="mono text-[11px] text-slate-500" x-text="`Secili: @${form.domain || acceptedDomains[0] || 'axione.xyz'}`"></span>
+        <span class="mono text-[11px] text-slate-500" x-text="`Secili: ${domainLabel(form.domain || availableDomains()[0] || 'axione.xyz')}`"></span>
       </div>
       <div class="grid gap-2 sm:grid-cols-2">
-        <template x-for="domain in acceptedDomains" :key="domain">
-          <button @click="form.domain = domain" type="button" :class="form.domain === domain ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'" class="flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-medium">
-            <span x-text="`@${domain}`"></span>
+        <template x-for="domain in availableDomains()" :key="domain">
+          <button @click="setDomain(domain)" type="button" :class="form.domain === domain ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'" class="flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-medium">
+            <span x-text="domainLabel(domain)"></span>
             <svg x-show="form.domain === domain" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="m5 13 4 4L19 7"/></svg>
           </button>
         </template>
       </div>
-      <select x-model="form.domain" class="mt-3 w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
-        <template x-for="domain in acceptedDomains" :key="`select-${domain}`">
-          <option :value="domain" x-text="domain"></option>
+      <select x-model="form.domain" @change="setDomain(form.domain)" class="mt-3 w-full rounded-xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        <template x-for="domain in availableDomains()" :key="`select-${domain}`">
+          <option :value="domain" x-text="domainLabel(domain)"></option>
         </template>
       </select>
       <div x-show="form.domain === 'googlemail'" class="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -59,7 +59,7 @@
       </div>
     </div>
 
-    <label class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+    <label x-show="form.domain !== 'googlemail'" class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
       <input x-model="form.isPersistent" :disabled="form.inboxMode === 'personal'" type="checkbox" class="rounded border-slate-300 text-[#1a73e8] focus:ring-[#1a73e8]">
       Kalici inbox olarak sakla
     </label>

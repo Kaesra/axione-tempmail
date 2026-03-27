@@ -73,6 +73,24 @@ function mailDesk() {
       if (this.googleEnabled && !this.acceptedDomains.includes('googlemail')) this.acceptedDomains.push('googlemail')
     },
 
+    availableDomains() {
+      return this.acceptedDomains.filter((domain) => domain !== 'googlemail').concat(this.googleAccounts.length ? ['googlemail'] : [])
+    },
+
+    setDomain(domain) {
+      this.form.domain = domain
+      if (domain === 'googlemail') {
+        this.form.inboxMode = 'temp'
+        this.form.isPersistent = false
+        this.form.localPart = ''
+      }
+    },
+
+    domainLabel(domain) {
+      if (domain === 'googlemail') return 'Googlemail Temp'
+      return `@${domain}`
+    },
+
     async api(url, options = {}) {
       const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options })
       if (!response.ok) {
