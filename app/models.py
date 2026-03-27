@@ -100,6 +100,15 @@ class GoogleAlias(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
+class BlockedDomain(Base):
+    __tablename__ = "blocked_domains"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    domain: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class Message(Base):
     __tablename__ = "messages"
 

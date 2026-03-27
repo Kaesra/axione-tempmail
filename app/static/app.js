@@ -2,7 +2,7 @@ function createMailDesk() {
   const initial = JSON.parse(document.getElementById('initial-state').textContent)
 
   return {
-    acceptedDomains: initial.acceptedDomains || ['axione.xyz'],
+    acceptedDomains: Array.isArray(initial.acceptedDomains) ? initial.acceptedDomains.filter(Boolean) : [],
     pollSeconds: initial.pollSeconds,
     tempInboxMinutes: initial.tempInboxMinutes || 5,
     tempDailyLimit: initial.tempDailyLimit || 3,
@@ -43,7 +43,7 @@ function createMailDesk() {
     googleMessagesRequest: null,
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
-    form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
+    form: { localPart: '', domain: (Array.isArray(initial.acceptedDomains) ? initial.acceptedDomains[0] : '') || '', isPersistent: false, profileName: '', inboxMode: 'temp' },
     apiKeyForm: { name: '' },
     googleAliasForm: { google_account_id: '', name: '', tag: '' },
 
@@ -75,9 +75,13 @@ function createMailDesk() {
     },
 
     ensureValidDomain() {
-      if (!this.acceptedDomains.length) this.acceptedDomains = ['axione.xyz']
       this.ensureGoogleDomain()
-      if (!this.acceptedDomains.includes(this.form.domain)) this.form.domain = this.acceptedDomains[0]
+      const domains = this.availableDomains()
+      if (!domains.length) {
+        this.form.domain = ''
+        return
+      }
+      if (!domains.includes(this.form.domain)) this.form.domain = domains[0]
     },
 
     ensureGoogleDomain() {
@@ -313,7 +317,7 @@ function createMailDesk() {
       try {
         if (this.googleEnabled && this.auth.user) await this.loadGoogleWorkspace({ includeAliases: true })
         const domains = this.availableDomains()
-        if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
+        if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || ''
         if (this.form.domain === 'googlemail') {
           this.form.inboxMode = 'temp'
           this.form.isPersistent = false
@@ -661,7 +665,7 @@ function createMailDesk() {
     previewInboxAddress() {
       if (this.form.domain === 'googlemail') return 'otomatik.gmail.alias@googlemail.com'
       const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
-      const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
+      const domain = this.form.domain || this.availableDomains()[0] || 'domain-secili-degil'
       return `${local}@${domain}`
     },
 

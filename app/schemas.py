@@ -186,8 +186,21 @@ class PersonalInboxApproval(BaseModel):
     created_at: datetime
 
 
+class BlockedDomainCreate(BaseModel):
+    domain: str = Field(min_length=1, max_length=255)
+    reason: str = Field(default="", max_length=255)
+
+
+class BlockedDomainResponse(BaseModel):
+    id: int
+    domain: str
+    reason: str = ""
+    created_at: datetime
+
+
 class ConfigResponse(BaseModel):
     accepted_domains: list[str]
+    blocked_domains: list[str]
     allow_any_domain: bool
     poll_seconds: int
     message_ttl_hours: int

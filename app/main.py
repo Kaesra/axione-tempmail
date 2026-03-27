@@ -27,6 +27,7 @@ from app.auth_service import (
 )
 from app.config import settings
 from app.database import SessionLocal, init_db
+from app.domain_service import available_domains, default_domain, list_blocked_domains, upsert_blocked_domain, delete_blocked_domain
 from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, create_temp_google_alias, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
 from app.mail_service import (
     approve_personal_inbox,
@@ -51,7 +52,7 @@ from app.mail_service import (
     temp_inbox_creations_today,
 )
 from app.models import Inbox
-from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, ConfigResponse, DeleteResponse, GoogleAccountResponse, GoogleAliasCreate, GoogleAliasResponse, GoogleConnectResponse, GoogleMessageResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
+from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, BlockedDomainCreate, BlockedDomainResponse, ConfigResponse, DeleteResponse, GoogleAccountResponse, GoogleAliasCreate, GoogleAliasResponse, GoogleConnectResponse, GoogleMessageResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
 from app.utils import generate_local_part
 
@@ -102,11 +103,12 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     current_user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    domains = available_domains()
     return templates.TemplateResponse(
         request,
         "index.html",
         {
-            "accepted_domains": settings.accepted_domains,
+            "accepted_domains": domains,
             "allow_any_domain": settings.allow_any_domain,
             "poll_seconds": settings.poll_seconds,
             "temp_inbox_minutes": settings.temp_inbox_minutes,
@@ -121,12 +123,14 @@ async def index(request: Request):
 @app.get("/guide", response_class=HTMLResponse)
 async def guide(request: Request):
     current_user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    domains = available_domains()
     return templates.TemplateResponse(
         request,
         "docs.html",
         {
             "current_user": template_user_payload(current_user),
-            "accepted_domains": settings.accepted_domains,
+            "accepted_domains": domains,
+            "blocked_domains": [item["domain"] for item in list_blocked_domains()],
             "smtp_port": settings.smtp_port,
             "web_port": settings.web_port,
         },
@@ -297,10 +301,33 @@ async def admin_remove_message(message_id: int, _: dict = Depends(require_admin)
     return DeleteResponse(deleted=deleted)
 
 
+@app.get("/api/admin/domains/blacklist", response_model=list[BlockedDomainResponse])
+async def admin_blacklisted_domains(_: dict = Depends(require_admin)) -> list[BlockedDomainResponse]:
+    return [BlockedDomainResponse(**item) for item in list_blocked_domains()]
+
+
+@app.post("/api/admin/domains/blacklist", response_model=BlockedDomainResponse)
+async def admin_block_domain(payload: BlockedDomainCreate, _: dict = Depends(require_admin)) -> BlockedDomainResponse:
+    try:
+        blocked_domain = upsert_blocked_domain(payload.domain, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return BlockedDomainResponse(**blocked_domain)
+
+
+@app.delete("/api/admin/domains/blacklist/{domain:path}", response_model=DeleteResponse)
+async def admin_unblock_domain(domain: str, _: dict = Depends(require_admin)) -> DeleteResponse:
+    deleted = delete_blocked_domain(domain)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Blocked domain not found")
+    return DeleteResponse(deleted=deleted)
+
+
 @app.get("/api/config", response_model=ConfigResponse)
 async def config(_: dict = Depends(require_user)) -> ConfigResponse:
     return ConfigResponse(
-        accepted_domains=settings.accepted_domains,
+        accepted_domains=available_domains(),
+        blocked_domains=[item["domain"] for item in list_blocked_domains()],
         allow_any_domain=settings.allow_any_domain,
         poll_seconds=settings.poll_seconds,
         message_ttl_hours=settings.message_ttl_hours,
@@ -323,7 +350,10 @@ async def healthz() -> HealthResponse:
 
 @app.post("/api/inboxes", response_model=InboxResponse)
 async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user)) -> InboxResponse:
-    domain = (payload.domain or (settings.accepted_domains[0] if settings.accepted_domains else "temp.local")).lower()
+    selected_domain = payload.domain or default_domain()
+    if not selected_domain:
+        raise HTTPException(status_code=503, detail="No active domains available")
+    domain = selected_domain.lower()
     if not is_domain_allowed(domain):
         raise HTTPException(status_code=400, detail="Domain is not allowed")
 
@@ -365,7 +395,9 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
 
 @app.get("/api/inboxes", response_model=list[InboxSummary])
 async def inbox_index(request: Request, user: dict = Depends(require_user)) -> list[InboxSummary]:
-    ensure_default_inboxes(user["username"], request.client.host if request.client else "unknown", settings.accepted_domains[0])
+    active_domain = default_domain()
+    if active_domain:
+        ensure_default_inboxes(user["username"], request.client.host if request.client else "unknown", active_domain)
     return [InboxSummary(**item) for item in list_inboxes(user["username"])]
 
 

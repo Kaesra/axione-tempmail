@@ -9,6 +9,7 @@ from sqlalchemy import case, delete, desc, func, select
 
 from app.config import settings
 from app.database import SessionLocal
+from app.domain_service import blocked_domain_names
 from app.models import Inbox, Message
 from app.utils import detect_message_category, detect_message_kind, extract_codes, extract_links, html_to_text, pick_verification_link, summarize_text
 
@@ -187,9 +188,12 @@ def _admin_message_payload(message: Message, inbox: Inbox | None) -> dict:
 
 
 def is_domain_allowed(domain: str) -> bool:
+    normalized = domain.lower().strip()
+    if normalized in blocked_domain_names():
+        return False
     if settings.allow_any_domain:
         return True
-    return domain.lower() in settings.accepted_domains
+    return normalized in settings.accepted_domains
 
 
 def ensure_inbox(

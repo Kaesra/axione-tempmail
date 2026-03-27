@@ -139,6 +139,7 @@
               <a href="#product" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Urun ne saglar?</a>
               <a href="#auth" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Kimlik dogrulama</a>
               <a href="#api" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">API kullanim ornekleri</a>
+              <a href="#domain-policy" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Domain politikasi</a>
               <a href="#responses" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Response alanlari</a>
               <a href="#limits" class="block rounded-2xl bg-slate-50 px-4 py-3 transition hover:bg-sky-50 hover:text-sky-700">Limitler ve davranis</a>
             </div>
@@ -203,7 +204,10 @@ GET  /api/integrations/google/connect
 GET  /api/integrations/google/accounts
 GET  /api/integrations/google/aliases
 POST /api/integrations/google/aliases
-GET  /api/integrations/google/messages</code></pre>
+GET  /api/integrations/google/messages
+GET  /api/admin/domains/blacklist
+POST /api/admin/domains/blacklist
+DELETE /api/admin/domains/blacklist/{domain}</code></pre>
               </div>
             </section>
 
@@ -263,6 +267,20 @@ GET  /api/integrations/google/messages</code></pre>
                 </div>
 
                 <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">4b. Admin olarak domain blacklist'e ekle</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl -X POST https://mail.axione.xyz/api/admin/domains/blacklist \
+  -H 'Content-Type: application/json' \
+  -H 'Cookie: tempmail_session=&lt;admin-session-cookie&gt;' \
+  -d '{
+    "domain": "{{ accepted_domains[0] if accepted_domains else 'example.com' }}",
+    "reason": "Yeni temp olusturmayi durdur"
+  }'</code></pre>
+                  </div>
+                  <p class="mt-3 text-sm leading-6 text-slate-600">Blacklist'e eklenen domain UI seceneklerinden duser ve yeni temp inbox olusturma istekleri `400` ile reddedilir.</p>
+                </div>
+
+                <div>
                   <p class="mb-3 text-lg font-semibold text-slate-900">5. Tek mesaj detayini al</p>
                   <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
                     <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/messages/123 \
@@ -299,6 +317,25 @@ GET  /api/integrations/google/messages</code></pre>
                     <li>`message_kind`</li>
                     <li>`is_unread`</li>
                   </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="domain-policy" class="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+              <p class="mono text-xs uppercase tracking-[0.24em] text-violet-700">Domain Policy</p>
+              <h2 class="mt-3 text-3xl font-bold tracking-[-0.03em] text-slate-950">Domain blacklist API davranisi</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-3">
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Aktif domainler</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Guide ve compose akisi sadece blacklist disindaki domainleri gosterir.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Blacklist etkisi</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Blacklist'e alinan domain icin yeni inbox olusturma kapanir ve gelen mail kabul kontrolu bu kurala uyar.</p>
+                </div>
+                <div class="rounded-3xl bg-slate-50 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Su anki durum</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Blacklist kaydi sayisi: {{ blocked_domains|length }}</p>
                 </div>
               </div>
             </section>
@@ -341,6 +378,10 @@ GET  /api/integrations/google/messages</code></pre>
                 <div class="rounded-3xl border border-slate-200 p-5">
                   <p class="text-lg font-semibold text-slate-900">Health endpoint</p>
                   <p class="mt-2 text-sm leading-6 text-slate-600">`GET /healthz` acik saglik kontrolu icin kullanilabilir.</p>
+                </div>
+                <div class="rounded-3xl border border-slate-200 p-5">
+                  <p class="text-lg font-semibold text-slate-900">Domain blacklist</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Admin API ile blacklist'e alinan domainler yeni inbox olusturma akisindan otomatik cikarilir.</p>
                 </div>
               </div>
             </section>
