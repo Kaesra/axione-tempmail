@@ -1,10 +1,10 @@
-<section class="min-w-0 flex-1 rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200 xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
+<section x-cloak x-show="auth.user" class="min-w-0 flex-1 rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200 xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
   <div x-show="auth.user && (!messageViewOpen || !selectedMessageDetail)" class="flex h-full min-h-[760px] flex-col">
     <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
       <div class="flex items-center gap-3 text-slate-600">
         <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
-        <button class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-        <button @click="fetchInboxes(); refreshMessages()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
+        <button type="button" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+        <button type="button" @click="fetchInboxes(); refreshMessages()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
       </div>
       <div class="flex items-center gap-2 text-xs text-slate-500">
         <span x-text="messageCounterLabel()"></span>
@@ -12,23 +12,23 @@
     </div>
 
     <div class="flex border-b border-slate-200 text-sm">
-      <button @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[160px]">
+      <button type="button" @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[160px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
         Tumu
       </button>
-      <button @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 5.75A1.75 1.75 0 0 1 4.75 4h10.5A1.75 1.75 0 0 1 17 5.75v8.5A1.75 1.75 0 0 1 15.25 16H4.75A1.75 1.75 0 0 1 3 14.25v-8.5Z"/></svg>
         Birincil
       </button>
-      <button @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m9 12 2 2 4-4"/><path stroke-linecap="round" d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z"/></svg>
         Sosyal
       </button>
-      <button @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v4"/><path stroke-linecap="round" d="M12 17h.01"/><path stroke-linecap="round" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
         Spam
       </button>
-      <button @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 2"/></svg>
         Verify
       </button>
@@ -40,14 +40,14 @@
           <div>
             <p class="text-lg font-medium text-slate-700">Mesaj yok</p>
             <p class="mt-2 text-sm" x-text="messages.length ? 'Bu filtrede mesaj yok. Tum sekmesine gecmeyi dene.' : 'Inbox sec, filtreyi degistir veya yeni mail bekle.'"></p>
-            <button x-show="messages.length && filter.mode !== 'all'" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700">Tum mailleri goster</button>
-            <button @click="composeOpen = true" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
+            <button x-show="messages.length && filter.mode !== 'all'" type="button" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700">Tum mailleri goster</button>
+            <button type="button" @click="openCompose()" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#155fbe]">Yeni Inbox Olustur</button>
           </div>
         </div>
       </template>
 
       <template x-for="message in filteredMessages()" :key="message.id">
-        <button @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'bg-[#f2f6fc]' : (message.is_unread ? 'bg-white' : 'bg-slate-50/80')" class="grid w-full grid-cols-[24px_24px_minmax(140px,220px)_minmax(0,1fr)_90px] items-center gap-3 border-b border-slate-200 px-4 py-2 text-left hover:shadow-[inset_0_-1px_0_0_rgb(226_232_240)]">
+        <button type="button" @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'bg-[#f2f6fc]' : (message.is_unread ? 'bg-white' : 'bg-slate-50/80')" class="grid w-full grid-cols-[24px_24px_minmax(140px,220px)_minmax(0,1fr)_90px] items-center gap-3 border-b border-slate-200 px-4 py-2 text-left hover:shadow-[inset_0_-1px_0_0_rgb(226_232_240)]">
           <span class="h-2.5 w-2.5 rounded-full" :class="message.is_unread ? 'bg-[#1a73e8]' : 'bg-transparent'"></span>
           <svg class="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m12 17.5 6.18 3.25-1.18-6.88L22 9l-6.9-1-3.1-6.25L8.9 8 2 9l4.99 4.87-1.17 6.88z"/></svg>
           <div class="min-w-0 text-sm" :class="message.is_unread ? 'font-bold text-slate-900' : 'text-slate-700'" x-text="message.sender_domain || message.mail_from"></div>
@@ -67,14 +67,14 @@
   <div x-show="auth.user && messageViewOpen && selectedMessageDetail" class="flex h-full min-h-[760px] flex-col">
     <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
       <div class="flex items-center gap-2 text-slate-600">
-        <button @click="closeMessageView()" class="rounded-full p-2 hover:bg-slate-100">
+        <button type="button" @click="closeMessageView()" class="rounded-full p-2 hover:bg-slate-100">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-        <button @click="deleteSelectedMessage()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
+        <button type="button" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+        <button type="button" @click="deleteSelectedMessage()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
       </div>
       <div class="flex items-center gap-2 text-slate-500">
-        <button @click="toggleSelectedUnread()" class="rounded-full px-3 py-2 text-xs font-medium hover:bg-slate-100">Okundu</button>
+        <button type="button" @click="toggleSelectedUnread()" class="rounded-full px-3 py-2 text-xs font-medium hover:bg-slate-100">Okundu</button>
       </div>
     </div>
 
@@ -100,9 +100,9 @@
           </div>
           <div class="flex flex-wrap justify-end gap-2">
             <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
-              <button @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700" x-text="code"></button>
+              <button type="button" @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700" x-text="code"></button>
             </template>
-            <button x-show="selectedMessageDetail?.verification_link" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white">Dogrulama Linki</button>
+            <button x-show="selectedMessageDetail?.verification_link" type="button" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white">Dogrulama Linki</button>
           </div>
         </div>
 

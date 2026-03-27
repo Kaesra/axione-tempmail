@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Axione Mail Desk</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/static/vendor/alpine.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -16,6 +16,17 @@
       .mail-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 999px; }
       [x-cloak] { display: none !important; }
     </style>
+    <script>
+      document.addEventListener('alpine:initialized', () => {
+        document.documentElement.dataset.alpine = 'ready'
+      })
+
+      window.setTimeout(() => {
+        if (document.documentElement.dataset.alpine === 'ready') return
+        const warning = document.getElementById('boot-warning')
+        if (warning) warning.hidden = false
+      }, 1500)
+    </script>
   </head>
   <body class="min-h-screen bg-[#f6f8fc] text-slate-900">
     <script id="initial-state" type="application/json">{{ {
@@ -25,11 +36,15 @@
       'tempDailyLimit': temp_daily_limit,
       'currentUser': current_user,
       'adminUsername': admin_username,
+      'googleEnabled': google_enabled,
     } | tojson }}</script>
 
     <main x-data="mailDesk()" x-init="init()" class="min-h-screen">
       {% include "partials/header.html" %}
       {% include "partials/notices.html" %}
+      <div id="boot-warning" hidden class="mx-3 mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm lg:mx-4">
+        Arayuz JavaScript'i yuklenemedi. Bu durumda `Olustur` ve inbox aksiyonlari calismaz. Lokal kopya `/static/vendor/alpine.min.js` uzerinden yuklenir; dosya eksikse veya istek engellenirse once bunu kontrol et.
+      </div>
 
       <div class="flex min-h-[calc(100vh-73px)] gap-4 px-2 pb-4 pt-3 lg:px-4">
         {% include "partials/sidebar.html" %}
@@ -38,6 +53,8 @@
       </div>
 
       {% include "partials/compose_modal.html" %}
+      {% include "partials/account_modal.html" %}
+      {% include "partials/admin_monitor_modal.html" %}
       {% include "partials/auth_modal.html" %}
     </main>
 
