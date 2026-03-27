@@ -1,6 +1,6 @@
 <aside x-cloak class="hidden w-[380px] shrink-0 xl:block" x-show="auth.user && !messageViewOpen">
   <div class="sticky top-[92px] space-y-4">
-    <div class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div class="glass-panel rounded-[30px] p-5">
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Mesaj Detayi</p>
@@ -18,23 +18,23 @@
       </div>
 
       <div class="mt-4 space-y-3">
-        <div class="rounded-2xl bg-slate-50 p-4">
+        <div class="rounded-[22px] bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(255,255,255,0.72))] p-4">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Aktif Inbox</p>
           <p class="mt-1 break-all text-sm font-medium text-slate-900" x-text="activeInbox ? activeInbox.address : '-' "></p>
           <p class="mt-2 text-xs text-slate-500" x-text="activeInbox ? inboxBadge(activeInbox) : ''"></p>
         </div>
-        <div class="rounded-2xl bg-slate-50 p-4">
+        <div class="rounded-[22px] bg-slate-50/80 p-4">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Kaynak</p>
           <p class="mt-1 break-all text-sm font-medium text-slate-900" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
         </div>
       </div>
 
-      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-2xl bg-slate-50 p-4">
+      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-[24px] bg-white/76 p-4 ring-1 ring-slate-200/70">
         <pre class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : 'Mesaj secildiginde burada acilir.'"></pre>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="glass-panel rounded-[30px] p-5">
       <div class="flex items-center justify-between gap-3">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-sky-500">Admin Monitor</p>
@@ -45,7 +45,7 @@
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="glass-panel rounded-[30px] p-5">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-amber-500">Admin Onayi</p>
@@ -67,7 +67,7 @@
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="glass-panel rounded-[30px] p-5">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-indigo-500">Kisisel Inbox</p>

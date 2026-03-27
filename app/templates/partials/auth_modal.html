@@ -1,27 +1,96 @@
-<section x-cloak x-show="!auth.user" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4">
-  <div class="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-[0_40px_120px_rgba(15,23,42,0.35)] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-    <div class="bg-[#e8f0fe] px-6 py-8 lg:px-8">
-      <p class="mono text-xs uppercase tracking-[0.35em] text-[#174ea6]">Restricted Access</p>
-      <h2 class="mt-4 text-3xl font-medium tracking-tight text-slate-900">Kayit ol, admin onaylasin, sonra posta panosuna gir.</h2>
-      <p class="mt-4 text-sm text-slate-700">Bu panel ekip ici kullanim icin kilitli. Kayitlar admin onayi bekler. Onaydan sonra verify mail, kod ve linkleri gorebilirsin.</p>
-      <div class="mt-6 rounded-2xl bg-white/70 px-4 py-4 text-sm text-slate-700">
-        <p class="font-medium text-slate-900">Admin girisi</p>
-        <p class="mt-2"><span class="font-medium">Kullanici adi:</span> <span class="mono" x-text="adminUsername"></span></p>
-        <p class="mt-2"><span class="font-medium">Sifre:</span> `.env` icindeki <span class="mono">TEMPMAIL_ADMIN_PASSWORD</span> degeri</p>
+<section x-cloak x-show="!auth.user" class="fixed inset-0 z-50 grid place-items-center bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.24),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(249,115,22,0.16),_transparent_20%),linear-gradient(180deg,_rgba(15,23,42,0.86),_rgba(15,23,42,0.95))] p-4">
+  <div class="w-full max-w-5xl overflow-hidden rounded-[36px] bg-white shadow-[0_40px_140px_rgba(15,23,42,0.45)] lg:grid lg:grid-cols-[1.12fr_0.88fr]">
+    <div class="relative overflow-hidden bg-[linear-gradient(180deg,#edf7ff,#dff0ff)] px-6 py-8 lg:px-10 lg:py-10">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.24),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(249,115,22,0.20),_transparent_24%)]"></div>
+      <div class="relative">
+        <p class="mono text-xs uppercase tracking-[0.35em] text-[#0f5d9c]">Secure Access</p>
+        <h2 class="mt-4 max-w-xl text-3xl font-medium tracking-tight text-slate-900 lg:text-4xl">Kayit ol, onay al, mailbox ve servis akisini tek bir operasyon panelinden yonet.</h2>
+        <p class="mt-4 max-w-xl text-sm leading-7 text-slate-700">Bu ekran sadece login degil; operasyon merkezi. Onayli kullanicilar ayni oturum icinde inbox, API key, Gmail baglama ve dogrulama akisini yonetir.</p>
+
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
+          <div class="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-white/70">
+            <p class="text-sm font-semibold text-slate-900">1. Kayit</p>
+            <p class="mt-2 text-xs leading-6 text-slate-600">Kullanici adi ve sifre ile hesap acilir.</p>
+          </div>
+          <div class="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-white/70">
+            <p class="text-sm font-semibold text-slate-900">2. Onay</p>
+            <p class="mt-2 text-xs leading-6 text-slate-600">Admin hesabi bekleyen kullanicilari onaylar.</p>
+          </div>
+          <div class="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-white/70">
+            <p class="text-sm font-semibold text-slate-900">3. Baglanti</p>
+            <p class="mt-2 text-xs leading-6 text-slate-600">Iceriden API key veya Gmail OAuth baglantisi eklenir.</p>
+          </div>
+        </div>
+
+        <div class="mt-8 rounded-[28px] bg-[linear-gradient(135deg,#0f172a,#0b2545)] p-5 text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="mono text-[11px] uppercase tracking-[0.24em] text-sky-300">Google Mail Bagislama</p>
+              <p class="mt-3 text-sm leading-7 text-slate-200">Kullanicilar kendi Gmail hesaplarini OAuth ile baglar. Sistem son mailleri okur, `+tag` varyasyonlari uretir ve bagli hesap akisini hesap panelinden yonetir.</p>
+            </div>
+            <div class="rounded-2xl bg-white/10 px-3 py-2 text-xs text-slate-200">OAuth + Gmail Readonly</div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-3xl bg-white/78 px-4 py-4 text-sm text-slate-700 ring-1 ring-white/70 shadow-sm">
+          <p class="font-medium text-slate-900">Admin girisi</p>
+          <p class="mt-2"><span class="font-medium">Kullanici adi:</span> <span class="mono" x-text="adminUsername"></span></p>
+          <p class="mt-2"><span class="font-medium">Sifre:</span> `.env` icindeki <span class="mono">TEMPMAIL_ADMIN_PASSWORD</span> degeri</p>
+        </div>
       </div>
     </div>
-    <div class="px-6 py-8 lg:px-8">
-      <div class="flex gap-2 rounded-full bg-slate-100 p-1 text-sm font-medium">
-        <button @click="auth.mode = 'login'" :class="auth.mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Giris</button>
-        <button @click="auth.mode = 'register'" :class="auth.mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="flex-1 rounded-full px-4 py-2">Kayit Ol</button>
+
+    <div class="px-6 py-8 lg:px-8 lg:py-10">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="mono text-xs uppercase tracking-[0.28em] text-slate-400">Authentication</p>
+          <h3 class="mt-2 text-2xl font-medium tracking-tight text-slate-900" x-text="auth.mode === 'login' ? 'Hesabina giris yap' : 'Yeni bir hesap olustur'"></h3>
+        </div>
+        <div class="rounded-full bg-slate-100 p-1 text-sm font-medium shadow-inner">
+          <button @click="auth.mode = 'login'" :class="auth.mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="rounded-full px-4 py-2">Giris</button>
+          <button @click="auth.mode = 'register'" :class="auth.mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="rounded-full px-4 py-2">Kayit Ol</button>
+        </div>
       </div>
-      <div class="mt-6 space-y-4">
-        <input x-model="auth.form.username" type="text" placeholder="kullanici adi" class="rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
-        <input x-model="auth.form.password" type="password" placeholder="sifre" class="rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
-        <button @click="auth.mode === 'login' ? login() : register()" class="w-full rounded-2xl bg-[#0b57d0] px-4 py-3 text-sm font-medium text-white hover:bg-[#0842a0]" x-text="auth.mode === 'login' ? 'Giris Yap' : 'Kayit Ol'"></button>
+
+      <div class="mt-5 rounded-[24px] bg-[linear-gradient(135deg,rgba(15,23,42,0.03),rgba(14,165,233,0.08))] px-4 py-4 text-sm text-slate-600">
+        Hesap onayi sonrasi dashboard otomatik inbox, key ve bagli Google hesap verilerini yukler; ilk ekranda her sey hazir gelir.
       </div>
+
+      <div class="mt-6 grid gap-4">
+        <label class="block">
+          <span class="mb-2 block text-xs font-medium uppercase tracking-[0.22em] text-slate-400">Kullanici adi</span>
+          <input x-model="auth.form.username" type="text" placeholder="ornek: berkay" class="w-full rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-xs font-medium uppercase tracking-[0.22em] text-slate-400">Sifre</span>
+          <input x-model="auth.form.password" type="password" placeholder="guclu bir sifre gir" class="w-full rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+        </label>
+      </div>
+
+      <div class="mt-5 rounded-2xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600" x-show="auth.mode === 'register'">
+        Kayit sonrasi kullanici hemen aktif olmaz. Admin onayi geldikten sonra mailbox, API key ve Google hesap baglama ozellikleri otomatik acilir.
+      </div>
+      <div class="mt-5 rounded-2xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600" x-show="auth.mode === 'login'">
+        Giris yapinca sistem inbox'larini, API key'lerini ve varsa bagli Gmail hesaplarini otomatik yukler.
+      </div>
+
+      <button @click="auth.mode === 'login' ? login() : register()" :disabled="authBusy" class="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#0b57d0] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-[#0842a0] disabled:cursor-not-allowed disabled:opacity-60">
+        <svg x-show="authBusy" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.3" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <span x-text="auth.mode === 'login' ? (authBusy ? 'Giris yapiliyor' : 'Giris Yap') : (authBusy ? 'Kayit olusturuluyor' : 'Kayit Ol')"></span>
+      </button>
+
       <p x-show="auth.message" class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700" x-text="auth.message"></p>
       <p x-show="auth.error" class="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="auth.error"></p>
+
+      <div class="mt-6 rounded-[28px] border border-slate-200 p-5">
+        <p class="mono text-[11px] uppercase tracking-[0.24em] text-slate-400">Bu oturumla neler acilir?</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Temp ve kisisel inbox olusturma</div>
+          <div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">API key uretme ve revoke etme</div>
+          <div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Google hesap baglama ve alias uretme</div>
+          <div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Mesaj, kod ve link yonetimi</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
