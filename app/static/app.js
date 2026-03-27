@@ -45,6 +45,7 @@ function mailDesk() {
 
     async init() {
       this.consumeQueryNotice()
+      this.ensureGoogleDomain()
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
@@ -64,7 +65,12 @@ function mailDesk() {
 
     ensureValidDomain() {
       if (!this.acceptedDomains.length) this.acceptedDomains = ['axione.xyz']
+      this.ensureGoogleDomain()
       if (!this.acceptedDomains.includes(this.form.domain)) this.form.domain = this.acceptedDomains[0]
+    },
+
+    ensureGoogleDomain() {
+      if (this.googleEnabled && !this.acceptedDomains.includes('googlemail')) this.acceptedDomains.push('googlemail')
     },
 
     async api(url, options = {}) {
@@ -192,6 +198,7 @@ function mailDesk() {
       if (!this.auth.user || !this.googleEnabled) return
       this.googleAccounts = await this.api('/api/integrations/google/accounts')
       if (!this.googleAliasForm.google_account_id && this.googleAccounts[0]) this.googleAliasForm.google_account_id = this.googleAccounts[0].id
+      this.mergeGoogleInbox()
     },
 
     async loadGoogleAliases() {
@@ -203,6 +210,8 @@ function mailDesk() {
       if (!this.auth.user || !this.googleEnabled) return
       try {
         this.googleMessages = await this.api('/api/integrations/google/messages')
+        this.googleMessages = Array.isArray(this.googleMessages) ? this.googleMessages.map((item) => this.normalizeGoogleMessage(item)) : []
+        this.mergeGoogleInbox()
       } catch (error) {
         this.googleError = error.message
       }
@@ -233,6 +242,23 @@ function mailDesk() {
         this.setNotice('Google alias olusturuldu', 'success')
         await this.loadGoogleAccounts()
       } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async createGoogleTempInbox() {
+      this.googleError = ''
+      try {
+        const alias = await this.api('/api/integrations/google/temp-alias', { method: 'POST' })
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
+        this.form.domain = 'googlemail'
+        this.composeOpen = false
+        this.setNotice(`Google temp alias hazir: ${alias.address}`, 'success')
+        await this.selectInbox('googlemail://connected')
+      } catch (error) {
+        this.composeError = error.message
         this.googleError = error.message
         this.setNotice(error.message, 'error')
       }
@@ -346,6 +372,7 @@ function mailDesk() {
     async fetchInboxes() {
       if (!this.auth.user) return
       this.inboxes = await this.api('/api/inboxes')
+      this.mergeGoogleInbox()
       if (!this.activeInbox && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address)
       else if (this.activeInbox) {
         const fresh = this.inboxes.find((item) => item.address === this.activeInbox.address)
@@ -356,6 +383,10 @@ function mailDesk() {
     async createInbox() {
       this.ensureValidDomain()
       this.composeError = ''
+      if (this.form.domain === 'googlemail') {
+        await this.createGoogleTempInbox()
+        return
+      }
       try {
         const inbox = await this.api('/api/inboxes', {
           method: 'POST',
@@ -383,12 +414,38 @@ function mailDesk() {
 
     async selectInbox(address) {
       this.messageViewOpen = false
+      if (address === 'googlemail://connected') {
+        this.activeInbox = this.googleInboxSummary()
+        await this.refreshMessages()
+        return
+      }
       this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`)
       await this.refreshMessages()
     },
 
     async refreshMessages() {
       if (!this.activeInbox || !this.auth.user) return
+      if (this.activeInbox.address === 'googlemail://connected') {
+        await this.loadGoogleMessages()
+        this.messages = [...this.googleMessages]
+        if (!this.messages.length) {
+          this.selectedMessage = null
+          this.selectedMessageDetail = null
+          this.messageViewOpen = false
+          return
+        }
+        const currentId = this.selectedMessage?.id
+        if (currentId && this.messageViewOpen) {
+          const nextMessage = this.messages.find((item) => item.id === currentId)
+          if (nextMessage) this.loadMessage(nextMessage.id)
+          else {
+            this.selectedMessage = null
+            this.selectedMessageDetail = null
+            this.messageViewOpen = false
+          }
+        }
+        return
+      }
       const payload = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`)
       this.messages = Array.isArray(payload) ? payload.map((item) => this.normalizeMessage(item)) : []
       await this.fetchInboxes()
@@ -411,6 +468,12 @@ function mailDesk() {
     },
 
     async loadMessage(messageId) {
+      if (String(messageId).startsWith('google-')) {
+        this.selectedMessageDetail = this.messages.find((item) => String(item.id) === String(messageId)) || null
+        this.selectedMessage = this.selectedMessageDetail
+        this.messageViewOpen = true
+        return
+      }
       this.selectedMessageDetail = this.normalizeMessage(await this.api(`/api/messages/${messageId}`))
       this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail
       this.messageViewOpen = true
@@ -432,6 +495,10 @@ function mailDesk() {
 
     async toggleSelectedUnread() {
       if (!this.selectedMessage) return
+      if (String(this.selectedMessage.id).startsWith('google-')) {
+        this.setNotice('Google bagli mailler icin okundu durumu yerelden degistirilmiyor', 'error')
+        return
+      }
       const updated = this.normalizeMessage(await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'PATCH', body: JSON.stringify({ is_unread: !this.selectedMessage.is_unread }) }))
       const index = this.messages.findIndex((item) => item.id === updated.id)
       if (index >= 0) this.messages[index] = { ...this.messages[index], ...updated }
@@ -448,6 +515,10 @@ function mailDesk() {
 
     async deleteSelectedMessage() {
       if (!this.selectedMessage) return
+      if (String(this.selectedMessage.id).startsWith('google-')) {
+        this.setNotice('Google bagli mailler burada silinmiyor', 'error')
+        return
+      }
       await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'DELETE' })
       await this.refreshMessages()
     },
@@ -513,6 +584,7 @@ function mailDesk() {
     },
 
     previewInboxAddress() {
+      if (this.form.domain === 'googlemail') return 'otomatik+tm-xxxx@gmail.com'
       const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
       const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
       return `${local}@${domain}`
@@ -520,8 +592,49 @@ function mailDesk() {
 
     inboxBadge(inbox) {
       if (!inbox) return ''
+      if (inbox.domain === 'googlemail') return 'Google Temp'
       if (inbox.inbox_mode === 'personal') return inbox.is_approved ? 'Kisisel' : 'Kisisel Onay'
       return 'Temp 5 dk'
+    },
+
+    googleInboxSummary() {
+      return {
+        local_part: 'googlemail',
+        domain: 'googlemail',
+        address: 'googlemail://connected',
+        profile_name: 'Googlemail Temp Havuzu',
+        profile_type: 'google',
+        inbox_mode: 'temp',
+        is_persistent: true,
+        requires_approval: false,
+        is_approved: true,
+        approved_at: null,
+        expires_at: null,
+        created_at: new Date().toISOString(),
+        message_count: this.googleMessages.length,
+        unread_count: this.googleMessages.length,
+        verification_count: this.googleMessages.filter((item) => item.message_kind === 'verification').length,
+        latest_message_at: this.googleMessages[0]?.received_at || null,
+        latest_subject: this.googleMessages[0]?.subject || '',
+      }
+    },
+
+    mergeGoogleInbox() {
+      this.inboxes = (this.inboxes || []).filter((item) => item.address !== 'googlemail://connected')
+      if (this.googleAccounts.length) this.inboxes = [this.googleInboxSummary(), ...this.inboxes]
+    },
+
+    normalizeGoogleMessage(value) {
+      const message = this.normalizeMessage(value)
+      message.message_category = 'primary'
+      message.message_kind = message.alias_name ? 'verification' : 'general'
+      message.summary = message.snippet || message.summary || ''
+      message.inbox_address = 'googlemail://connected'
+      message.sender_domain = message.mail_from || message.sender_domain
+      message.html_body = ''
+      message.raw_headers = ''
+      message.is_unread = true
+      return message
     },
 
     apiKeyMask(apiKey) {

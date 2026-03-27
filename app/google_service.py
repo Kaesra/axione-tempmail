@@ -263,6 +263,30 @@ def create_google_alias(username: str, google_account_id: int, name: str, tag: s
         return _public_google_alias(alias, account.google_email)
 
 
+def create_temp_google_alias(username: str) -> dict:
+    with SessionLocal() as session:
+        account = session.scalar(select(GoogleAccount).where(GoogleAccount.username == username).order_by(GoogleAccount.created_at.desc()))
+        if account is None:
+            raise ValueError("Connect a Google account first")
+        tag = _generate_temp_tag()
+        while session.scalar(select(GoogleAlias).where(GoogleAlias.google_account_id == account.id, GoogleAlias.tag == tag)) is not None:
+            tag = _generate_temp_tag()
+        existing_count = session.query(GoogleAlias).filter(GoogleAlias.google_account_id == account.id).count()
+        alias = GoogleAlias(
+            google_account_id=account.id,
+            name=f"Temp Alias {existing_count + 1}",
+            tag=tag,
+            is_temp=True,
+            auto_generated=True,
+        )
+        session.add(alias)
+        session.commit()
+        session.refresh(alias)
+        _ensure_auto_aliases(session, account.id)
+        session.commit()
+        return _public_google_alias(alias, account.google_email)
+
+
 def delete_google_account(username: str, google_account_id: int) -> int:
     with SessionLocal() as session:
         account = session.scalar(select(GoogleAccount).where(GoogleAccount.id == google_account_id, GoogleAccount.username == username))

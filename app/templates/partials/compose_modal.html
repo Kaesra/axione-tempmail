@@ -54,6 +54,9 @@
           <option :value="domain" x-text="domain"></option>
         </template>
       </select>
+      <div x-show="form.domain === 'googlemail'" class="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        `googlemail` secenegi bagli Gmail hesaplarin icin otomatik temp alias uretir. Olusturma isleminde sistem yeni bir Gmail temp alias ayirir ve tum bagli Google mailleri tek havuzda gosterir.
+      </div>
     </div>
 
     <label class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">

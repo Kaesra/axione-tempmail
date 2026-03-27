@@ -27,7 +27,7 @@ from app.auth_service import (
 )
 from app.config import settings
 from app.database import SessionLocal, init_db
-from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
+from app.google_service import complete_google_oauth, create_google_alias, create_google_oauth_url, create_temp_google_alias, delete_google_account, google_enabled, list_google_accounts, list_google_aliases, list_google_recent_messages
 from app.mail_service import (
     approve_personal_inbox,
     cleanup_expired_messages,
@@ -229,6 +229,15 @@ async def google_aliases(user: dict = Depends(require_user)) -> list[GoogleAlias
 @app.get("/api/integrations/google/messages", response_model=list[GoogleMessageResponse])
 async def google_messages(user: dict = Depends(require_user)) -> list[GoogleMessageResponse]:
     return [GoogleMessageResponse(**item) for item in list_google_recent_messages(user["username"])]
+
+
+@app.post("/api/integrations/google/temp-alias", response_model=GoogleAliasResponse)
+async def google_temp_alias(user: dict = Depends(require_user)) -> GoogleAliasResponse:
+    try:
+        alias = create_temp_google_alias(user["username"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GoogleAliasResponse(**alias)
 
 
 @app.delete("/api/integrations/google/accounts/{google_account_id}", response_model=DeleteResponse)
