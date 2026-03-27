@@ -215,14 +215,22 @@ function mailDesk() {
 
     async loadGoogleAccounts() {
       if (!this.auth.user || !this.googleEnabled) return
-      this.googleAccounts = await this.api('/api/integrations/google/accounts')
-      if (!this.googleAliasForm.google_account_id && this.googleAccounts[0]) this.googleAliasForm.google_account_id = this.googleAccounts[0].id
-      this.mergeGoogleInbox()
+      try {
+        this.googleAccounts = await this.api('/api/integrations/google/accounts')
+        if (!this.googleAliasForm.google_account_id && this.googleAccounts[0]) this.googleAliasForm.google_account_id = this.googleAccounts[0].id
+        this.mergeGoogleInbox()
+      } catch (error) {
+        this.googleError = error.message
+      }
     },
 
     async loadGoogleAliases() {
       if (!this.auth.user || !this.googleEnabled) return
-      this.googleAliases = await this.api('/api/integrations/google/aliases')
+      try {
+        this.googleAliases = await this.api('/api/integrations/google/aliases')
+      } catch (error) {
+        this.googleError = error.message
+      }
     },
 
     async loadGoogleMessages() {
@@ -285,20 +293,25 @@ function mailDesk() {
 
     async openCompose() {
       this.composeError = ''
-      this.ensureValidDomain()
-      if (this.googleEnabled && this.auth.user) {
-        await this.loadGoogleAccounts()
-        await this.loadGoogleAliases()
-      }
-      const domains = this.availableDomains()
-      if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
-      if (this.form.domain === 'googlemail') {
-        this.form.inboxMode = 'temp'
-        this.form.isPersistent = false
-        this.form.localPart = ''
-        if (!this.form.profileName) this.form.profileName = 'Googlemail Temp'
-      }
       this.composeOpen = true
+      this.ensureValidDomain()
+      try {
+        if (this.googleEnabled && this.auth.user) {
+          await this.loadGoogleAccounts()
+          await this.loadGoogleAliases()
+        }
+        const domains = this.availableDomains()
+        if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
+        if (this.form.domain === 'googlemail') {
+          this.form.inboxMode = 'temp'
+          this.form.isPersistent = false
+          this.form.localPart = ''
+          if (!this.form.profileName) this.form.profileName = 'Googlemail Temp'
+        }
+      } catch (error) {
+        this.composeError = error.message
+        this.setNotice(error.message, 'error')
+      }
     },
 
     async disconnectGoogleAccount(accountId) {
