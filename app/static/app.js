@@ -1,4 +1,4 @@
-function mailDesk() {
+function createMailDesk() {
   const initial = JSON.parse(document.getElementById('initial-state').textContent)
 
   return {
@@ -745,3 +745,13 @@ function mailDesk() {
     },
   }
 }
+
+window.mailDesk = createMailDesk
+
+function registerMailDesk() {
+  if (!window.Alpine || typeof window.Alpine.data !== 'function') return
+  window.Alpine.data('mailDesk', createMailDesk)
+}
+
+document.addEventListener('alpine:init', registerMailDesk, { once: true })
+registerMailDesk()
