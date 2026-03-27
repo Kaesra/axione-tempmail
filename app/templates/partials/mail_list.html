@@ -41,7 +41,7 @@
             <p class="text-lg font-medium text-slate-700">Mesaj yok</p>
             <p class="mt-2 text-sm" x-text="messages.length ? 'Bu filtrede mesaj yok. Tum sekmesine gecmeyi dene.' : 'Inbox sec, filtreyi degistir veya yeni mail bekle.'"></p>
             <button x-show="messages.length && filter.mode !== 'all'" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700">Tum mailleri goster</button>
-            <button @click="composeOpen = true" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
+            <button @click="openCompose()" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
           </div>
         </div>
       </template>

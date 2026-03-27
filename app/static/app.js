@@ -83,6 +83,7 @@ function mailDesk() {
         this.form.inboxMode = 'temp'
         this.form.isPersistent = false
         this.form.localPart = ''
+        this.form.profileName = 'Googlemail Temp'
       }
     },
 
@@ -280,6 +281,24 @@ function mailDesk() {
         this.googleError = error.message
         this.setNotice(error.message, 'error')
       }
+    },
+
+    async openCompose() {
+      this.composeError = ''
+      this.ensureValidDomain()
+      if (this.googleEnabled && this.auth.user) {
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+      }
+      const domains = this.availableDomains()
+      if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
+      if (this.form.domain === 'googlemail') {
+        this.form.inboxMode = 'temp'
+        this.form.isPersistent = false
+        this.form.localPart = ''
+        if (!this.form.profileName) this.form.profileName = 'Googlemail Temp'
+      }
+      this.composeOpen = true
     },
 
     async disconnectGoogleAccount(accountId) {

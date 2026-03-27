@@ -28,7 +28,7 @@
     </div>
 
     <div class="ml-auto flex items-center gap-2">
-      <button x-show="auth.user" @click="composeOpen = true" class="rounded-full bg-[#c2e7ff] px-4 py-2 text-sm font-medium text-slate-800 lg:hidden">Olustur</button>
+      <button x-show="auth.user" @click="openCompose()" class="rounded-full bg-[#c2e7ff] px-4 py-2 text-sm font-medium text-slate-800 lg:hidden">Olustur</button>
       <a href="/guide" class="hidden rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 lg:block">Docs</a>
       <button x-show="auth.user" @click="openAccount()" class="grid h-10 w-10 place-items-center rounded-full bg-[#0b5] text-white" x-text="auth.user ? auth.user.username.slice(0, 1).toUpperCase() : 'A'"></button>
     </div>
