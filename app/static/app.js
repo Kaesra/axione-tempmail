@@ -6,11 +6,20 @@ function mailDesk() {
     pollSeconds: initial.pollSeconds,
     tempInboxMinutes: initial.tempInboxMinutes || 5,
     tempDailyLimit: initial.tempDailyLimit || 3,
+    googleEnabled: Boolean(initial.googleEnabled),
     currentUser: initial.currentUser,
     adminUsername: initial.adminUsername || 'admin',
     search: '',
     composeOpen: false,
+    accountOpen: false,
+    adminMonitorOpen: false,
+    accountTab: 'overview',
     composeError: '',
+    apiKeyError: '',
+    adminMonitorError: '',
+    googleError: '',
+    authBusy: false,
+    googleConnectBusy: false,
     notice: { text: '', type: 'success' },
     inboxes: [],
     messages: [],
@@ -21,18 +30,34 @@ function mailDesk() {
     poller: null,
     pendingUsers: [],
     pendingPersonalInboxes: [],
+    apiKeys: [],
+    adminInboxes: [],
+    adminMessages: [],
+    adminSelectedMessage: null,
+    googleAccounts: [],
+    googleAliases: [],
+    googleMessages: [],
     filter: { mode: 'all' },
     auth: { user: initial.currentUser, mode: 'login', message: '', error: '', form: { username: '', password: '' } },
     form: { localPart: '', domain: (initial.acceptedDomains || ['axione.xyz'])[0] || 'axione.xyz', isPersistent: false, profileName: '', inboxMode: 'temp' },
+    apiKeyForm: { name: '' },
+    googleAliasForm: { google_account_id: '', name: '', tag: '' },
 
     async init() {
+      this.consumeQueryNotice()
+      this.ensureGoogleDomain()
       await this.loadMe()
       if (this.auth.user) {
         this.ensureValidDomain()
         await this.fetchInboxes()
+        await this.loadApiKeys()
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
         if (this.auth.user.is_admin) {
           await this.loadPendingUsers()
           await this.loadPendingPersonalInboxes()
+          await this.loadAdminOverview()
         }
       }
       this.startPolling()
@@ -40,7 +65,31 @@ function mailDesk() {
 
     ensureValidDomain() {
       if (!this.acceptedDomains.length) this.acceptedDomains = ['axione.xyz']
+      this.ensureGoogleDomain()
       if (!this.acceptedDomains.includes(this.form.domain)) this.form.domain = this.acceptedDomains[0]
+    },
+
+    ensureGoogleDomain() {
+      if (this.googleEnabled && !this.acceptedDomains.includes('googlemail')) this.acceptedDomains.push('googlemail')
+    },
+
+    availableDomains() {
+      return this.acceptedDomains.filter((domain) => domain !== 'googlemail').concat(this.googleAccounts.length ? ['googlemail'] : [])
+    },
+
+    setDomain(domain) {
+      this.form.domain = domain
+      if (domain === 'googlemail') {
+        this.form.inboxMode = 'temp'
+        this.form.isPersistent = false
+        this.form.localPart = ''
+        this.form.profileName = 'Googlemail Temp'
+      }
+    },
+
+    domainLabel(domain) {
+      if (domain === 'googlemail') return 'Googlemail Temp'
+      return `@${domain}`
     },
 
     async api(url, options = {}) {
@@ -72,22 +121,29 @@ function mailDesk() {
     },
 
     async register() {
+      if (this.authBusy) return
       this.auth.error = ''
       this.auth.message = ''
+      this.authBusy = true
       try {
         const payload = await this.api('/api/auth/register', { method: 'POST', body: JSON.stringify(this.auth.form) })
         this.auth.message = payload.message
+        this.auth.form.password = ''
         this.setNotice(payload.message, 'success')
         this.auth.mode = 'login'
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
+      } finally {
+        this.authBusy = false
       }
     },
 
     async login() {
+      if (this.authBusy) return
       this.auth.error = ''
       this.auth.message = ''
+      this.authBusy = true
       try {
         const payload = await this.api('/api/auth/login', { method: 'POST', body: JSON.stringify(this.auth.form) })
         this.auth.user = payload.user
@@ -95,10 +151,20 @@ function mailDesk() {
         this.ensureValidDomain()
         this.setNotice(`Hos geldin ${payload.user.username}`, 'success')
         await this.fetchInboxes()
-        if (this.auth.user && this.auth.user.is_admin) await this.loadPendingUsers()
+        await this.loadApiKeys()
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
+        if (this.auth.user && this.auth.user.is_admin) {
+          await this.loadPendingUsers()
+          await this.loadPendingPersonalInboxes()
+          await this.loadAdminOverview()
+        }
       } catch (error) {
         this.auth.error = error.message
         this.setNotice(error.message, 'error')
+      } finally {
+        this.authBusy = false
       }
     },
 
@@ -107,10 +173,184 @@ function mailDesk() {
       this.auth.user = null
       this.inboxes = []
       this.messages = []
+      this.apiKeys = []
+      this.adminInboxes = []
+      this.adminMessages = []
+      this.adminSelectedMessage = null
+      this.googleAccounts = []
+      this.googleAliases = []
+      this.googleMessages = []
       this.selectedMessage = null
       this.selectedMessageDetail = null
       this.composeOpen = false
+      this.accountOpen = false
+      this.adminMonitorOpen = false
       this.setNotice('Cikis yapildi', 'success')
+    },
+
+    async loadApiKeys() {
+      if (!this.auth.user) return
+      this.apiKeys = await this.api('/api/auth/api-keys')
+    },
+
+    openAccount() {
+      if (!this.auth.user) return
+      this.accountOpen = true
+      this.accountTab = 'overview'
+      this.apiKeyError = ''
+      this.googleError = ''
+      this.loadApiKeys()
+      this.loadGoogleAccounts()
+      this.loadGoogleAliases()
+      this.loadGoogleMessages()
+    },
+
+    closeAccount() {
+      this.accountOpen = false
+      this.accountTab = 'overview'
+      this.apiKeyError = ''
+      this.googleError = ''
+      this.apiKeyForm.name = ''
+    },
+
+    async loadGoogleAccounts() {
+      if (!this.auth.user || !this.googleEnabled) return
+      try {
+        this.googleAccounts = await this.api('/api/integrations/google/accounts')
+        if (!this.googleAliasForm.google_account_id && this.googleAccounts[0]) this.googleAliasForm.google_account_id = this.googleAccounts[0].id
+        this.mergeGoogleInbox()
+      } catch (error) {
+        this.googleError = error.message
+      }
+    },
+
+    async loadGoogleAliases() {
+      if (!this.auth.user || !this.googleEnabled) return
+      try {
+        this.googleAliases = await this.api('/api/integrations/google/aliases')
+      } catch (error) {
+        this.googleError = error.message
+      }
+    },
+
+    async loadGoogleMessages() {
+      if (!this.auth.user || !this.googleEnabled) return
+      try {
+        this.googleMessages = await this.api('/api/integrations/google/messages')
+        this.googleMessages = Array.isArray(this.googleMessages) ? this.googleMessages.map((item) => this.normalizeGoogleMessage(item)) : []
+        this.mergeGoogleInbox()
+      } catch (error) {
+        this.googleError = error.message
+      }
+    },
+
+    async connectGoogleAccount() {
+      if (!this.auth.user || !this.googleEnabled) return
+      this.googleError = ''
+      this.googleConnectBusy = true
+      try {
+        const payload = await this.api('/api/integrations/google/connect')
+        window.location.href = payload.url
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      } finally {
+        this.googleConnectBusy = false
+      }
+    },
+
+    async createGoogleAlias() {
+      this.googleError = ''
+      try {
+        const payload = await this.api('/api/integrations/google/aliases', { method: 'POST', body: JSON.stringify(this.googleAliasForm) })
+        this.googleAliases = [payload, ...this.googleAliases]
+        this.googleAliasForm.name = ''
+        this.googleAliasForm.tag = ''
+        this.setNotice('Google alias olusturuldu', 'success')
+        await this.loadGoogleAccounts()
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async createGoogleTempInbox() {
+      this.googleError = ''
+      try {
+        const alias = await this.api('/api/integrations/google/temp-alias', { method: 'POST' })
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
+        this.form.domain = 'googlemail'
+        this.composeOpen = false
+        this.setNotice(`Google temp alias hazir: ${alias.address}`, 'success')
+        await this.selectInbox('googlemail://connected')
+      } catch (error) {
+        this.composeError = error.message
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async openCompose() {
+      this.composeError = ''
+      this.composeOpen = true
+      this.ensureValidDomain()
+      try {
+        if (this.googleEnabled && this.auth.user) {
+          await this.loadGoogleAccounts()
+          await this.loadGoogleAliases()
+        }
+        const domains = this.availableDomains()
+        if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || 'axione.xyz'
+        if (this.form.domain === 'googlemail') {
+          this.form.inboxMode = 'temp'
+          this.form.isPersistent = false
+          this.form.localPart = ''
+          if (!this.form.profileName) this.form.profileName = 'Googlemail Temp'
+        }
+      } catch (error) {
+        this.composeError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async disconnectGoogleAccount(accountId) {
+      this.googleError = ''
+      try {
+        await this.api(`/api/integrations/google/accounts/${accountId}`, { method: 'DELETE' })
+        await this.loadGoogleAccounts()
+        await this.loadGoogleAliases()
+        await this.loadGoogleMessages()
+        this.setNotice('Google hesap baglantisi kaldirildi', 'success')
+      } catch (error) {
+        this.googleError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async createApiKey() {
+      this.apiKeyError = ''
+      try {
+        const payload = await this.api('/api/auth/api-keys', { method: 'POST', body: JSON.stringify(this.apiKeyForm) })
+        this.apiKeyForm.name = ''
+        this.apiKeys = [payload.api_key, ...this.apiKeys]
+        this.setNotice('API key olusturuldu', 'success')
+      } catch (error) {
+        this.apiKeyError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async revokeApiKey(apiKeyId) {
+      try {
+        const updated = await this.api(`/api/auth/api-keys/${apiKeyId}`, { method: 'DELETE' })
+        const index = this.apiKeys.findIndex((item) => item.id === updated.id)
+        if (index >= 0) this.apiKeys[index] = updated
+        this.setNotice('API key iptal edildi', 'success')
+      } catch (error) {
+        this.apiKeyError = error.message
+        this.setNotice(error.message, 'error')
+      }
     },
 
     async loadPendingUsers() {
@@ -136,9 +376,53 @@ function mailDesk() {
       await this.fetchInboxes()
     },
 
+    async loadAdminOverview() {
+      if (!this.auth.user || !this.auth.user.is_admin) return
+      this.adminInboxes = await this.api('/api/admin/inboxes/all')
+      this.adminMessages = await this.api('/api/admin/messages/recent')
+    },
+
+    openAdminMonitor() {
+      if (!this.auth.user || !this.auth.user.is_admin) return
+      this.adminMonitorOpen = true
+      this.adminMonitorError = ''
+      this.loadAdminOverview()
+    },
+
+    closeAdminMonitor() {
+      this.adminMonitorOpen = false
+      this.adminMonitorError = ''
+      this.adminSelectedMessage = null
+    },
+
+    async loadAdminMessage(messageId) {
+      this.adminMonitorError = ''
+      try {
+        this.adminSelectedMessage = this.normalizeMessage(await this.api(`/api/admin/messages/${messageId}`))
+      } catch (error) {
+        this.adminMonitorError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
+    async deleteAdminMessage(messageId) {
+      this.adminMonitorError = ''
+      try {
+        await this.api(`/api/admin/messages/${messageId}`, { method: 'DELETE' })
+        this.adminMessages = this.adminMessages.filter((item) => item.id !== messageId)
+        if (this.adminSelectedMessage && this.adminSelectedMessage.id === messageId) this.adminSelectedMessage = null
+        this.setNotice('Admin mesaj kaydi silindi', 'success')
+        await this.loadAdminOverview()
+      } catch (error) {
+        this.adminMonitorError = error.message
+        this.setNotice(error.message, 'error')
+      }
+    },
+
     async fetchInboxes() {
       if (!this.auth.user) return
       this.inboxes = await this.api('/api/inboxes')
+      this.mergeGoogleInbox()
       if (!this.activeInbox && this.inboxes[0]) await this.selectInbox(this.inboxes[0].address)
       else if (this.activeInbox) {
         const fresh = this.inboxes.find((item) => item.address === this.activeInbox.address)
@@ -149,6 +433,10 @@ function mailDesk() {
     async createInbox() {
       this.ensureValidDomain()
       this.composeError = ''
+      if (this.form.domain === 'googlemail') {
+        await this.createGoogleTempInbox()
+        return
+      }
       try {
         const inbox = await this.api('/api/inboxes', {
           method: 'POST',
@@ -176,12 +464,38 @@ function mailDesk() {
 
     async selectInbox(address) {
       this.messageViewOpen = false
+      if (address === 'googlemail://connected') {
+        this.activeInbox = this.googleInboxSummary()
+        await this.refreshMessages()
+        return
+      }
       this.activeInbox = this.inboxes.find((item) => item.address === address) || await this.api(`/api/inboxes/${encodeURIComponent(address)}`)
       await this.refreshMessages()
     },
 
     async refreshMessages() {
       if (!this.activeInbox || !this.auth.user) return
+      if (this.activeInbox.address === 'googlemail://connected') {
+        await this.loadGoogleMessages()
+        this.messages = [...this.googleMessages]
+        if (!this.messages.length) {
+          this.selectedMessage = null
+          this.selectedMessageDetail = null
+          this.messageViewOpen = false
+          return
+        }
+        const currentId = this.selectedMessage?.id
+        if (currentId && this.messageViewOpen) {
+          const nextMessage = this.messages.find((item) => item.id === currentId)
+          if (nextMessage) this.loadMessage(nextMessage.id)
+          else {
+            this.selectedMessage = null
+            this.selectedMessageDetail = null
+            this.messageViewOpen = false
+          }
+        }
+        return
+      }
       const payload = await this.api(`/api/inboxes/${encodeURIComponent(this.activeInbox.address)}/messages`)
       this.messages = Array.isArray(payload) ? payload.map((item) => this.normalizeMessage(item)) : []
       await this.fetchInboxes()
@@ -192,11 +506,24 @@ function mailDesk() {
         return
       }
       const currentId = this.selectedMessage?.id
-      const nextMessage = this.messages.find((item) => item.id === currentId) || this.filteredMessages()[0] || this.messages[0]
-      if (nextMessage) await this.loadMessage(nextMessage.id)
+      if (currentId && this.messageViewOpen) {
+        const nextMessage = this.messages.find((item) => item.id === currentId)
+        if (nextMessage) await this.loadMessage(nextMessage.id)
+        else {
+          this.selectedMessage = null
+          this.selectedMessageDetail = null
+          this.messageViewOpen = false
+        }
+      }
     },
 
     async loadMessage(messageId) {
+      if (String(messageId).startsWith('google-')) {
+        this.selectedMessageDetail = this.messages.find((item) => String(item.id) === String(messageId)) || null
+        this.selectedMessage = this.selectedMessageDetail
+        this.messageViewOpen = true
+        return
+      }
       this.selectedMessageDetail = this.normalizeMessage(await this.api(`/api/messages/${messageId}`))
       this.selectedMessage = this.messages.find((item) => item.id === messageId) || this.selectedMessageDetail
       this.messageViewOpen = true
@@ -218,6 +545,10 @@ function mailDesk() {
 
     async toggleSelectedUnread() {
       if (!this.selectedMessage) return
+      if (String(this.selectedMessage.id).startsWith('google-')) {
+        this.setNotice('Google bagli mailler icin okundu durumu yerelden degistirilmiyor', 'error')
+        return
+      }
       const updated = this.normalizeMessage(await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'PATCH', body: JSON.stringify({ is_unread: !this.selectedMessage.is_unread }) }))
       const index = this.messages.findIndex((item) => item.id === updated.id)
       if (index >= 0) this.messages[index] = { ...this.messages[index], ...updated }
@@ -234,6 +565,10 @@ function mailDesk() {
 
     async deleteSelectedMessage() {
       if (!this.selectedMessage) return
+      if (String(this.selectedMessage.id).startsWith('google-')) {
+        this.setNotice('Google bagli mailler burada silinmiyor', 'error')
+        return
+      }
       await this.api(`/api/messages/${this.selectedMessage.id}`, { method: 'DELETE' })
       await this.refreshMessages()
     },
@@ -270,6 +605,7 @@ function mailDesk() {
         if (this.auth.user && this.auth.user.is_admin) {
           this.loadPendingUsers()
           this.loadPendingPersonalInboxes()
+          this.loadAdminOverview()
         }
       }, this.pollSeconds * 1000)
     },
@@ -298,6 +634,7 @@ function mailDesk() {
     },
 
     previewInboxAddress() {
+      if (this.form.domain === 'googlemail') return 'otomatik+tm-xxxx@gmail.com'
       const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
       const domain = this.form.domain || this.acceptedDomains[0] || 'axione.xyz'
       return `${local}@${domain}`
@@ -305,12 +642,71 @@ function mailDesk() {
 
     inboxBadge(inbox) {
       if (!inbox) return ''
+      if (inbox.domain === 'googlemail') return 'Google Temp'
       if (inbox.inbox_mode === 'personal') return inbox.is_approved ? 'Kisisel' : 'Kisisel Onay'
       return 'Temp 5 dk'
     },
 
+    googleInboxSummary() {
+      return {
+        local_part: 'googlemail',
+        domain: 'googlemail',
+        address: 'googlemail://connected',
+        profile_name: 'Googlemail Temp Havuzu',
+        profile_type: 'google',
+        inbox_mode: 'temp',
+        is_persistent: true,
+        requires_approval: false,
+        is_approved: true,
+        approved_at: null,
+        expires_at: null,
+        created_at: new Date().toISOString(),
+        message_count: this.googleMessages.length,
+        unread_count: this.googleMessages.length,
+        verification_count: this.googleMessages.filter((item) => item.message_kind === 'verification').length,
+        latest_message_at: this.googleMessages[0]?.received_at || null,
+        latest_subject: this.googleMessages[0]?.subject || '',
+      }
+    },
+
+    mergeGoogleInbox() {
+      this.inboxes = (this.inboxes || []).filter((item) => item.address !== 'googlemail://connected')
+      if (this.googleAccounts.length) this.inboxes = [this.googleInboxSummary(), ...this.inboxes]
+    },
+
+    normalizeGoogleMessage(value) {
+      const message = this.normalizeMessage(value)
+      message.message_category = 'primary'
+      message.message_kind = message.alias_name ? 'verification' : 'general'
+      message.summary = message.snippet || message.summary || ''
+      message.inbox_address = 'googlemail://connected'
+      message.sender_domain = message.mail_from || message.sender_domain
+      message.html_body = ''
+      message.raw_headers = ''
+      message.is_unread = true
+      return message
+    },
+
+    apiKeyMask(apiKey) {
+      if (!apiKey) return ''
+      return `${apiKey.prefix || 'axm'}...${apiKey.last_four || ''}`
+    },
+
     setNotice(text, type = 'success') {
       this.notice = { text, type }
+    },
+
+    consumeQueryNotice() {
+      const params = new URLSearchParams(window.location.search)
+      const googleState = params.get('google')
+      const message = params.get('message')
+      if (googleState === 'connected') this.setNotice('Google hesabi basariyla baglandi', 'success')
+      if (googleState === 'error') this.setNotice(message || 'Google baglantisi tamamlanamadi', 'error')
+      if (!googleState && !message) return
+      params.delete('google')
+      params.delete('message')
+      const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`
+      window.history.replaceState({}, '', next)
     },
 
     normalizeError(value) {
@@ -339,6 +735,8 @@ function mailDesk() {
       message.html_body = typeof message.html_body === 'string' ? message.html_body : ''
       message.raw_headers = typeof message.raw_headers === 'string' ? message.raw_headers : ''
       message.is_unread = Boolean(message.is_unread)
+      message.owner_username = typeof message.owner_username === 'string' ? message.owner_username : ''
+      message.inbox_profile_name = typeof message.inbox_profile_name === 'string' ? message.inbox_profile_name : ''
       return message
     },
 
