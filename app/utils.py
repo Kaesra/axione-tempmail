@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import secrets
 import string
+import unicodedata
 from html import unescape
 from html.parser import HTMLParser
 
@@ -36,6 +37,26 @@ SOCIAL_DOMAINS = ("facebook", "instagram", "tiktok", "x.com", "twitter", "discor
 SPAM_HINTS = ("casino", "bonus", "win", "prize", "airdrop", "crypto", "gift", "bet", "loan", "investment")
 UPDATE_DOMAINS = ("github", "notion", "slack", "jira", "atlassian", "google", "microsoft", "steam")
 
+REALISTIC_FIRST_NAMES = (
+    "jale", "ali", "mahmut", "gamze", "mirac", "yucel", "kubilay", "hayati", "birsen", "serdal",
+    "bunyamin", "ozgur", "ferdi", "reyhan", "ilhan", "gulsah", "nalan", "semih", "ergun", "fatih",
+    "serkan", "emre", "hatice", "baris", "rezan", "fuat", "gokhan", "orhan", "mehmet", "evren",
+    "oktay", "harun", "yavuz", "pinar", "umut", "mesude", "mustafa", "ufuk", "medine", "hasan",
+    "kamil", "ozcan", "nagihan", "ceren", "yusuf", "cetin", "tarkan", "ural", "yahya", "bengu",
+    "dilek", "bulent", "erol", "bahri", "selma", "gulcin", "ismail", "murat", "ebru", "tumay",
+    "basak", "aysegul", "evrim", "ulku", "fulya", "burcu", "taylan", "zeynep", "rabia", "sevda",
+    "serhat", "engin", "asli", "tuba", "bilge", "ferda", "ezgi", "aysun", "seda", "ozlem",
+    "koray", "senem", "emel", "nuray", "deniz", "seyma", "elif", "onur", "ibrahim", "sevil",
+    "volkan", "ilkay", "hale", "sedef", "serpil", "sultan", "serdar", "sukru", "yildiz", "aydin",
+)
+
+REALISTIC_LAST_NAMES = (
+    "yilmaz", "demir", "kaya", "sahin", "celik", "yildirim", "ozdemir", "arslan", "dogan", "kilic",
+    "aslan", "cakir", "kurt", "simsek", "tas", "acar", "ipek", "aksoy", "kara", "koc",
+    "polat", "gunes", "alkan", "aydin", "uzun", "bozkurt", "tekin", "keskin", "ozkan", "turan",
+    "sari", "altun", "guner", "tasdemir", "yuce", "bulut", "avci", "isik", "karaman", "ozer",
+)
+
 
 class HTMLTextExtractor(HTMLParser):
     def __init__(self) -> None:
@@ -65,9 +86,42 @@ class HTMLTextExtractor(HTMLParser):
         return " ".join(part.strip() for part in self._parts if part.strip())
 
 
+def ascii_slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return normalized.encode("ascii", "ignore").decode("ascii").lower()
+
+
 def generate_local_part(length: int = 10) -> str:
     alphabet = string.ascii_lowercase + string.digits
     return "tmp-" + "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def generate_realistic_local_part() -> str:
+    first = secrets.choice(REALISTIC_FIRST_NAMES)
+    last = secrets.choice(REALISTIC_LAST_NAMES)
+    year = str(secrets.randbelow(18) + 82)
+    short = str(secrets.randbelow(900) + 100)
+    patterns = (
+        lambda: f"{first}.{last}",
+        lambda: f"{first}{last}",
+        lambda: f"{first}_{last}",
+        lambda: f"{first}{year}",
+        lambda: f"{first}.{last}{year}",
+        lambda: f"{first[0]}{last}{short}",
+        lambda: f"{first}{last[0]}{short}",
+        lambda: f"{first}{short}",
+    )
+    return ascii_slug(secrets.choice(patterns)())[:64].strip("._-")
+
+
+def local_part_display_name(local_part: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9._-]+", " ", ascii_slug(local_part)).strip()
+    if not cleaned:
+        return "Mail Profili"
+    parts = [part for part in re.split(r"[._-]+", cleaned) if part and not part.isdigit()]
+    if not parts:
+        return "Mail Profili"
+    return " ".join(part.capitalize() for part in parts[:2])
 
 
 def extract_codes(*parts: str) -> list[str]:

@@ -13,6 +13,7 @@ function createMailDesk() {
     composeOpen: false,
     accountOpen: false,
     adminMonitorOpen: false,
+    composeTab: 'temp',
     accountTab: 'overview',
     composeError: '',
     apiKeyError: '',
@@ -46,6 +47,7 @@ function createMailDesk() {
     form: { localPart: '', domain: (Array.isArray(initial.acceptedDomains) ? initial.acceptedDomains[0] : '') || '', isPersistent: false, profileName: '', inboxMode: 'temp' },
     apiKeyForm: { name: '' },
     googleAliasForm: { google_account_id: '', name: '', tag: '' },
+    realisticPreviewPool: ['jale.yilmaz', 'emre.demir', 'basak.kaya', 'serkan.arslan', 'deniz.celik', 'ozlem.sahin'],
 
     async init() {
       this.consumeQueryNotice()
@@ -95,11 +97,25 @@ function createMailDesk() {
     setDomain(domain) {
       this.form.domain = domain
       if (domain === 'googlemail') {
+        this.composeTab = 'temp'
         this.form.inboxMode = 'temp'
         this.form.isPersistent = false
         this.form.localPart = ''
         this.form.profileName = 'Googlemail Temp'
       }
+    },
+
+    setComposeTab(tab) {
+      this.composeTab = tab === 'personal' ? 'personal' : 'temp'
+      this.setInboxMode(this.composeTab)
+    },
+
+    setInboxMode(mode) {
+      const nextMode = mode === 'personal' ? 'personal' : 'temp'
+      this.form.inboxMode = nextMode
+      this.composeTab = nextMode
+      this.form.isPersistent = nextMode === 'personal'
+      if (nextMode === 'temp') this.form.localPart = ''
     },
 
     domainLabel(domain) {
@@ -319,10 +335,13 @@ function createMailDesk() {
         const domains = this.availableDomains()
         if (!domains.includes(this.form.domain)) this.form.domain = domains[0] || ''
         if (this.form.domain === 'googlemail') {
+          this.composeTab = 'temp'
           this.form.inboxMode = 'temp'
           this.form.isPersistent = false
           this.form.localPart = ''
           if (!this.form.profileName) this.form.profileName = 'Googlemail Temp'
+        } else if (this.form.inboxMode !== 'personal') {
+          this.composeTab = 'temp'
         }
       } catch (error) {
         this.composeError = error.message
@@ -470,6 +489,7 @@ function createMailDesk() {
         })
         this.form.localPart = ''
         this.form.profileName = ''
+        this.composeTab = 'temp'
         this.form.inboxMode = 'temp'
         this.form.isPersistent = false
         this.composeOpen = false
@@ -664,9 +684,14 @@ function createMailDesk() {
 
     previewInboxAddress() {
       if (this.form.domain === 'googlemail') return 'otomatik.gmail.alias@googlemail.com'
-      const local = this.form.inboxMode === 'temp' ? 'otomatik-uretilecek' : (this.form.localPart?.trim() || 'otomatik-uretilecek')
+      const local = this.form.inboxMode === 'temp' ? this.tempIdentityPreview() : (this.form.localPart?.trim() || this.tempIdentityPreview())
       const domain = this.form.domain || this.availableDomains()[0] || 'domain-secili-degil'
       return `${local}@${domain}`
+    },
+
+    tempIdentityPreview() {
+      const hash = (this.form.domain || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
+      return this.realisticPreviewPool[Math.abs(hash) % this.realisticPreviewPool.length]
     },
 
     inboxBadge(inbox) {

@@ -1,108 +1,150 @@
-<div x-show="composeOpen && auth.user" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px]"></div>
-<section x-show="composeOpen && auth.user" x-transition class="fixed inset-x-0 bottom-0 z-50 mx-auto w-[min(980px,calc(100vw-24px))] overflow-hidden rounded-t-[32px] bg-white shadow-[0_32px_100px_rgba(15,23,42,0.30)] ring-1 ring-slate-200">
-  <div class="border-b border-slate-200 bg-[linear-gradient(135deg,#eef6ff,#f8fbff)] px-5 py-4 sm:px-6">
+<div x-cloak x-show="composeOpen && auth.user" x-transition.opacity @click="composeOpen = false" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[3px]"></div>
+<section x-cloak x-show="composeOpen && auth.user" x-transition:enter="transform transition ease-out duration-300" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transform transition ease-in duration-200" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="translate-x-full opacity-0" @keydown.escape.window="composeOpen = false" class="fixed inset-y-0 right-0 z-[60] flex w-full max-w-[820px] flex-col overflow-hidden border-l border-white/60 bg-[linear-gradient(180deg,#f8fbff,#f2f7fd)] shadow-[-24px_0_90px_rgba(15,23,42,0.24)]">
+  <div class="border-b border-slate-200/70 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,#f7fbff,#eef6ff)] px-6 py-5">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <p class="mono text-xs uppercase tracking-[0.28em] text-sky-700">Inbox Builder</p>
-        <h2 class="mt-2 text-2xl font-medium tracking-tight text-slate-900">Yeni inbox olustur</h2>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Klasik `axione.xyz` temp mail veya bagli Gmail hesaplarindan uretilen `Googlemail Temp` havuzu arasindan secim yap. Domain secimine gore form kendini otomatik ayarlar.</p>
+        <p class="mono text-xs uppercase tracking-[0.28em] text-sky-700">Inbox Studio</p>
+        <h2 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Gercek gorunen inbox olustur</h2>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Temp ve kisisel kutulari ayri akislarda yonet. Temp tarafta sistem artik `tmp-...` yerine daha gercekci local-partler uretir.</p>
       </div>
-      <button @click="composeOpen = false" class="rounded-full p-2 text-slate-500 hover:bg-white">
+      <button type="button" @click="composeOpen = false" class="rounded-2xl border border-white/80 bg-white/80 p-2 text-slate-500 shadow-sm transition hover:bg-white">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
   </div>
 
-  <div class="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.1fr_0.9fr]">
-    <div class="space-y-5">
-      <div x-show="composeError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="composeError"></div>
+  <div class="mail-scroll flex-1 overflow-y-auto px-6 py-6">
+    <div x-show="composeError" class="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="composeError"></div>
 
-      <div class="rounded-[28px] border border-slate-200 p-5">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Domain Choice</p>
-            <h3 class="mt-2 text-xl font-medium text-slate-900">Hangi mailbox tipini kullanacaksin?</h3>
-          </div>
-          <span class="mono rounded-full bg-slate-100 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-600" x-text="domainLabel(form.domain || availableDomains()[0] || 'axione.xyz')"></span>
-        </div>
-
-        <div class="mt-5 grid gap-3 sm:grid-cols-2">
-          <template x-for="domain in availableDomains()" :key="domain">
-            <button @click="setDomain(domain)" type="button" :class="form.domain === domain ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'" class="rounded-[24px] border p-4 text-left transition">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-base font-medium" x-text="domainLabel(domain)"></p>
-                  <p class="mt-2 text-sm leading-6 text-slate-500" x-text="domain === 'googlemail' ? 'Bagli Gmail hesaplardan otomatik temp alias ayirir ve tum mailleri ortak Googlemail havuzunda toplar.' : 'Klasik sistem inboxu. Temp veya kisisel kutu olarak olusturulabilir.'"></p>
-                </div>
-                <span x-show="form.domain === domain" class="rounded-full bg-white px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-sky-700">Secili</span>
+    <div class="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+      <div class="space-y-6">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <button type="button" @click="setComposeTab('temp')" :class="composeTab === 'temp' ? 'border-sky-500 bg-[linear-gradient(135deg,#eef6ff,#dff1ff)] shadow-[0_16px_36px_rgba(14,165,233,0.14)]' : 'border-slate-200 bg-white/80'" class="rounded-[28px] border p-5 text-left transition hover:-translate-y-0.5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="mono text-[11px] uppercase tracking-[0.22em] text-sky-700">Temp Flow</p>
+                <h3 class="mt-2 text-xl font-semibold text-slate-900">Temp Mail</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Hizli kayit, verify ve test akisi icin. Sistem gercek kullanici gibi gorunen adresler uretir.</p>
               </div>
-            </button>
-          </template>
-        </div>
-
-        <div x-show="!availableDomains().length" class="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Kullanilabilir domain bulunamadi.</div>
-      </div>
-
-      <div class="rounded-[28px] border border-slate-200 p-5">
-        <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Inbox Mode</p>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2" :class="form.domain === 'googlemail' ? 'opacity-60' : ''">
-          <button @click="form.inboxMode = 'temp'; form.isPersistent = false" type="button" :disabled="form.domain === 'googlemail'" :class="form.inboxMode === 'temp' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-2xl border px-4 py-4 text-left disabled:cursor-not-allowed">
-            <p class="text-sm font-medium">Temp Mail</p>
-            <p class="mt-2 text-xs text-slate-500">Hizli signup, verification ve test akislari icin.</p>
+              <span x-show="composeTab === 'temp'" class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">Secili</span>
+            </div>
           </button>
-          <button @click="form.inboxMode = 'personal'; form.isPersistent = true" type="button" :disabled="form.domain === 'googlemail'" :class="form.inboxMode === 'personal' ? 'border-[#1a73e8] bg-[#e8f0fe] text-[#174ea6]' : 'border-slate-200 bg-white text-slate-700'" class="rounded-2xl border px-4 py-4 text-left disabled:cursor-not-allowed">
-            <p class="text-sm font-medium">Kisisel</p>
-            <p class="mt-2 text-xs text-slate-500">Admin onayi sonrasi daha kalici kullanim icin.</p>
+
+          <button type="button" @click="setComposeTab('personal')" :disabled="form.domain === 'googlemail'" :class="composeTab === 'personal' ? 'border-indigo-500 bg-[linear-gradient(135deg,#eef2ff,#e4e9ff)] shadow-[0_16px_36px_rgba(79,70,229,0.12)]' : 'border-slate-200 bg-white/80 disabled:opacity-60'" class="rounded-[28px] border p-5 text-left transition hover:-translate-y-0.5 disabled:cursor-not-allowed">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="mono text-[11px] uppercase tracking-[0.22em] text-indigo-700">Personal Flow</p>
+                <h3 class="mt-2 text-xl font-semibold text-slate-900">Kisisel Mail</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Daha kalici bir adres. Admin onayi sonrasi aktif olur ve profil bazli kullanilir.</p>
+              </div>
+              <span x-show="composeTab === 'personal'" class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">Secili</span>
+            </div>
           </button>
         </div>
-        <div x-show="form.domain === 'googlemail'" class="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">Googlemail secildiginde sistem sadece `temp` modu kullanir. Yeni bir Gmail temp alias ayrilir ve mailbox otomatik ortak Googlemail havuzuna baglanir.</div>
-      </div>
 
-      <div class="grid gap-4 lg:grid-cols-2">
-        <div x-show="form.domain !== 'googlemail'" class="rounded-[28px] border border-slate-200 p-5">
-          <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Profil Adi</label>
-          <input x-model="form.profileName" type="text" placeholder="ornek: TikTok Profilim" class="w-full rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
-          <p class="mt-3 text-xs leading-6 text-slate-500">Inbox listesinde bu isim gorunur.</p>
+        <div class="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Domain Choice</p>
+              <h3 class="mt-2 text-xl font-medium text-slate-900">Adres hangi domainde olusacak?</h3>
+            </div>
+            <span class="mono rounded-full bg-slate-100 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-600" x-text="domainLabel(form.domain || availableDomains()[0] || 'axione.xyz')"></span>
+          </div>
+
+          <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <template x-for="domain in availableDomains()" :key="domain">
+              <button type="button" @click="setDomain(domain)" :class="form.domain === domain ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'" class="rounded-[24px] border p-4 text-left transition">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-base font-medium" x-text="domainLabel(domain)"></p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500" x-text="domain === 'googlemail' ? 'Bagli Gmail havuzundan temp alias ayirir.' : 'Normal kullanicinin gercek adres gibi gorecegi sistem domaini.'"></p>
+                  </div>
+                  <span x-show="form.domain === domain" class="rounded-full bg-white px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-sky-700">Secili</span>
+                </div>
+              </button>
+            </template>
+          </div>
         </div>
 
-        <div x-show="form.inboxMode !== 'temp' && form.domain !== 'googlemail'" class="rounded-[28px] border border-slate-200 p-5">
-          <label class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Local Part</label>
-          <input x-model="form.localPart" type="text" placeholder="ornek: berkay veya bos birak" class="w-full rounded-2xl border-slate-200 text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
-          <p class="mt-3 text-xs leading-6 text-slate-500">Bos birakirsan sistem otomatik bir local part uretir.</p>
+        <div x-show="composeTab === 'temp'" class="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Temp Settings</p>
+              <h3 class="mt-2 text-xl font-medium text-slate-900">Hizli temp kutu</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Isim havuzundan daha insan gibi local-part secilir. Profil adi girersen inbox listesinde daha duzenli gorunur.</p>
+            </div>
+            <div class="rounded-[22px] bg-[linear-gradient(135deg,#eef6ff,#f8fbff)] px-4 py-3 text-right">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Auto Sample</p>
+              <p class="mono mt-1 text-sm text-slate-800" x-text="tempIdentityPreview()"></p>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-4 lg:grid-cols-2">
+            <label class="block rounded-[24px] bg-slate-50/80 p-4">
+              <span class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Profil Adi</span>
+              <input x-model="form.profileName" type="text" placeholder="ornek: Netflix Kayit, Discord Test" class="w-full rounded-2xl border-slate-200 bg-white text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+            </label>
+            <label x-show="form.domain !== 'googlemail'" class="flex items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
+              <input x-model="form.isPersistent" :disabled="form.inboxMode === 'personal'" type="checkbox" class="rounded border-slate-300 text-[#1a73e8] focus:ring-[#1a73e8]">
+              Temp kutuyu kalici olarak sakla
+            </label>
+          </div>
+        </div>
+
+        <div x-show="composeTab === 'personal' && form.domain !== 'googlemail'" class="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Personal Setup</p>
+          <h3 class="mt-2 text-xl font-medium text-slate-900">Kisisel inbox talebi</h3>
+          <p class="mt-2 text-sm leading-6 text-slate-600">Bu bolum bilerek ayri. Kisisel kutular daha ciddi kullanim icin oldugundan adresi ve profil adini sen belirlersin.</p>
+
+          <div class="mt-5 grid gap-4 lg:grid-cols-2">
+            <label class="block rounded-[24px] bg-slate-50/80 p-4">
+              <span class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Gorunen Profil Adi</span>
+              <input x-model="form.profileName" type="text" placeholder="ornek: Berkay Is, Payment Profil" class="w-full rounded-2xl border-slate-200 bg-white text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+            </label>
+            <label class="block rounded-[24px] bg-slate-50/80 p-4">
+              <span class="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Local Part</span>
+              <input x-model="form.localPart" type="text" placeholder="ornek: berkay.kaya" class="w-full rounded-2xl border-slate-200 bg-white text-sm focus:border-[#1a73e8] focus:ring-[#1a73e8]">
+              <p class="mt-3 text-xs leading-6 text-slate-500">Bos birakirsan sistem sana yine daha dogal gorunen bir isim secimi yapar.</p>
+            </label>
+          </div>
         </div>
       </div>
+
+      <aside class="space-y-5">
+        <div class="rounded-[30px] bg-[linear-gradient(180deg,#0f172a,#132238)] p-5 text-white shadow-[0_22px_54px_rgba(15,23,42,0.26)]">
+          <p class="mono text-xs uppercase tracking-[0.24em] text-sky-300">Live Preview</p>
+          <h3 class="mt-2 text-2xl font-semibold tracking-tight">Disariya giden gorunum</h3>
+          <p class="mono mt-4 break-all rounded-2xl bg-white/10 px-4 py-3 text-sm text-slate-100" x-text="previewInboxAddress()"></p>
+          <div class="mt-5 space-y-3 text-sm text-slate-300">
+            <p x-show="composeTab === 'temp' && form.domain !== 'googlemail'">Yeni temp kutular `{{ temp_inbox_minutes }}` dakika aktif kalir ama isimleri daha temiz ve fark edilmeyecek sekilde uretilir.</p>
+            <p x-show="composeTab === 'personal' && form.domain !== 'googlemail'">Kisisel kutular admin onayi ile acilir ve daha duzenli kullanim icin ayrilir.</p>
+            <p x-show="form.domain === 'googlemail'">Googlemail havuzu yalnizca temp akisinda calisir. En az bir Google hesap bagli olmali.</p>
+          </div>
+        </div>
+
+        <div class="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Why Better?</p>
+          <div class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+            <p>Temp flow artik `tmp` koklu isimler yerine daha dogal local-partler kullanir.</p>
+            <p>Temp ve kisisel kutular ayri akista ilerler; kullanici ne actigini daha net anlar.</p>
+            <p>Farkli domain secimi ile her adres daha gercek kullanici emaili gibi gorunur.</p>
+          </div>
+        </div>
+
+        <div class="rounded-[30px] border border-slate-200 bg-slate-50/90 p-5">
+          <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Rules</p>
+          <div class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+            <p x-show="composeTab === 'temp'">Standart kullanicilar icin gunluk temp limit `{{ temp_daily_limit }}` adettir.</p>
+            <p x-show="composeTab === 'personal'">Kisisel kutular admin onayindan sonra tam aktif olur.</p>
+            <p x-show="form.domain === 'googlemail'">Googlemail secenegi bagli hesap yoksa otomatik gizlenir.</p>
+          </div>
+        </div>
+      </aside>
     </div>
-
-    <aside class="space-y-5">
-      <div class="rounded-[28px] bg-slate-950 p-5 text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
-        <p class="mono text-xs uppercase tracking-[0.24em] text-sky-300">Live Preview</p>
-        <h3 class="mt-2 text-xl font-medium tracking-tight">Olusacak adres</h3>
-        <p class="mono mt-4 break-all rounded-2xl bg-white/10 px-4 py-3 text-sm text-slate-100" x-text="previewInboxAddress()"></p>
-        <div class="mt-4 grid gap-3 text-sm text-slate-300">
-          <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'temp'">Temp kutular `{{ temp_inbox_minutes }}` dakika aktif kalir.</p>
-          <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'personal'">Kisisel kutular admin onayi ile aktif olur.</p>
-          <p x-show="form.domain === 'googlemail'">Googlemail kutusu secildiginde yeni bir Gmail alias ayrilir ve ortak Googlemail inbox'ina yonlendirilirsin.</p>
-        </div>
-      </div>
-
-      <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-        <p class="mono text-xs uppercase tracking-[0.24em] text-slate-500">Rules</p>
-        <div class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-          <p x-show="form.domain !== 'googlemail' && form.inboxMode === 'temp'">Normal kullanicilar icin gunluk temp limit `{{ temp_daily_limit }}` adettir. Admin tarafinda bu limit uygulanmaz.</p>
-          <p x-show="form.domain === 'googlemail'">Googlemail secenegi ancak en az bir Google hesap baglandiysa gorunur. Sistem once nokta varyasyonlu `@googlemail.com` alias uretir, gerekirse `+tag` fallback kullanir; bazi siteler yine de Gmail varyasyonlarini ayni hesap sayabilir.</p>
-          <p>Mailbox seciminden sonra mesaj paneli otomatik olarak ilgili inbox'a gecer.</p>
-        </div>
-      </div>
-
-      <label x-show="form.domain !== 'googlemail'" class="flex items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
-        <input x-model="form.isPersistent" :disabled="form.inboxMode === 'personal'" type="checkbox" class="rounded border-slate-300 text-[#1a73e8] focus:ring-[#1a73e8]">
-        Kalici inbox olarak sakla
-      </label>
-    </aside>
   </div>
 
-  <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4 sm:px-6">
-    <button @click="composeOpen = false" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Iptal</button>
-    <button @click="createInbox()" class="rounded-full bg-[#0b57d0] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0842a0]">Olustur</button>
+  <div class="flex items-center justify-end gap-3 border-t border-slate-200/70 bg-white/90 px-6 py-4">
+    <button type="button" @click="composeOpen = false" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Iptal</button>
+    <button type="button" @click="createInbox()" class="rounded-full bg-[#0b57d0] px-6 py-3 text-sm font-medium text-white shadow-[0_14px_30px_rgba(11,87,208,0.26)] transition hover:bg-[#0842a0]">Olustur</button>
   </div>
 </section>

@@ -54,7 +54,7 @@ from app.mail_service import (
 from app.models import Inbox
 from app.schemas import AdminInboxSummary, AdminMessageDetail, AdminMessagePreview, ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse, AuthMessageResponse, AuthRequest, AuthStatusResponse, BlockedDomainCreate, BlockedDomainResponse, ConfigResponse, DeleteResponse, GoogleAccountResponse, GoogleAliasCreate, GoogleAliasResponse, GoogleConnectResponse, GoogleMessageResponse, HealthResponse, InboxCreate, InboxResponse, InboxSummary, InboxUpdate, MessageDetail, MessagePreview, MessageUpdate, PersonalInboxApproval, UserResponse
 from app.smtp_server import SMTPServer
-from app.utils import generate_local_part
+from app.utils import generate_realistic_local_part, local_part_display_name
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -371,19 +371,35 @@ async def create_inbox(payload: InboxCreate, user: dict = Depends(require_user))
         if temp_count >= settings.temp_daily_limit:
             raise HTTPException(status_code=429, detail=f"Gunluk temp mail limiti doldu ({settings.temp_daily_limit})")
 
-    local_part = generate_local_part() if payload.inbox_mode == "temp" else (payload.local_part or generate_local_part()).strip().lower()
-    address = normalize_address(f"{local_part}@{domain}")
-    try:
-        inbox = ensure_inbox(
-            address,
-            owner_username=user["username"],
-            is_persistent=payload.is_persistent,
-            profile_name=payload.profile_name or ("Temp Profil" if payload.inbox_mode == "temp" else f"{local_part}@{domain}"),
-            profile_type="manual",
-            inbox_mode=payload.inbox_mode,
+    manual_local_part = bool(payload.local_part and payload.local_part.strip())
+    last_error: ValueError | None = None
+    for _ in range(6):
+        if payload.inbox_mode == "temp":
+            local_part = generate_realistic_local_part()
+        else:
+            local_part = (payload.local_part or generate_realistic_local_part()).strip().lower()
+        address = normalize_address(f"{local_part}@{domain}")
+        default_profile_name = (
+            f"{local_part_display_name(local_part)} Temp"
+            if payload.inbox_mode == "temp"
+            else f"{local_part_display_name(local_part)} Mail"
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
+        try:
+            inbox = ensure_inbox(
+                address,
+                owner_username=user["username"],
+                is_persistent=payload.is_persistent,
+                profile_name=payload.profile_name or default_profile_name,
+                profile_type="manual",
+                inbox_mode=payload.inbox_mode,
+            )
+            break
+        except ValueError as exc:
+            last_error = exc
+            if manual_local_part or "already reserved" not in str(exc).lower():
+                raise HTTPException(status_code=429, detail=str(exc)) from exc
+    else:
+        raise HTTPException(status_code=429, detail=str(last_error or "Inbox olusturulamadi"))
     if payload.is_persistent and not inbox.is_persistent:
         inbox = set_inbox_persistent(address, user["username"], True) or inbox
     return InboxResponse(
