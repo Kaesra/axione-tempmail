@@ -12,6 +12,7 @@ from sqlalchemy import delete, select
 from app.config import settings
 from app.database import SessionLocal
 from app.models import GoogleAccount, GoogleAlias, GoogleOAuthState
+from app.utils import generate_realistic_local_part, local_part_display_name
 
 
 GOOGLE_OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -32,7 +33,7 @@ _google_message_cache: dict[tuple[str, int], tuple[datetime, list[dict]]] = {}
 
 
 def _generate_temp_tag() -> str:
-    return f"tm-{secrets.token_hex(4)}"
+    return generate_realistic_local_part()
 
 
 def _gmail_base_local_part(email: str) -> str:
@@ -46,17 +47,32 @@ def _gmail_base_local_part(email: str) -> str:
 
 
 def _iter_gmail_dot_aliases(base_local_part: str):
-    slots = len(base_local_part) - 1
-    if slots <= 0:
+    length = len(base_local_part)
+    if length < 6:
         return
-    upper_bound = (1 << slots) - 1 if slots < 20 else 4095
-    for mask in range(1, upper_bound + 1):
-        candidate = [base_local_part[0]]
-        for index, char in enumerate(base_local_part[1:]):
-            if mask & (1 << index):
-                candidate.append(".")
-            candidate.append(char)
-        yield "".join(candidate)
+
+    seen: set[str] = set()
+
+    for split in range(3, length - 2):
+        parts = (base_local_part[:split], base_local_part[split:])
+        if min(len(part) for part in parts) >= 3:
+            candidate = ".".join(parts)
+            if candidate not in seen:
+                seen.add(candidate)
+                yield candidate
+
+    for first_split in range(2, length - 3):
+        for second_split in range(first_split + 2, length - 1):
+            parts = (
+                base_local_part[:first_split],
+                base_local_part[first_split:second_split],
+                base_local_part[second_split:],
+            )
+            if min(len(part) for part in parts) >= 2:
+                candidate = ".".join(parts)
+                if candidate not in seen:
+                    seen.add(candidate)
+                    yield candidate
 
 
 def _next_google_alias_tag(email: str, existing_tags: set[str]) -> str:
@@ -78,6 +94,11 @@ def _alias_address(email: str, tag: str) -> str:
     if tag.startswith(LOCAL_ALIAS_PREFIX):
         return f"{tag[len(LOCAL_ALIAS_PREFIX):]}@{alias_domain}"
     return f"{local_part}+{tag}@{alias_domain}" if tag else email
+
+
+def _alias_name_from_tag(tag: str) -> str:
+    visible = tag[len(LOCAL_ALIAS_PREFIX):] if tag.startswith(LOCAL_ALIAS_PREFIX) else tag
+    return f"{local_part_display_name(visible)} Alias"
 
 
 def _clear_google_message_cache(username: str) -> None:
@@ -102,7 +123,7 @@ def _ensure_auto_aliases(session, account_id: int) -> None:
         session.add(
             GoogleAlias(
                 google_account_id=account_id,
-                name=f"Temp Alias {len(aliases) + index + 1}",
+                name=_alias_name_from_tag(tag),
                 tag=tag,
                 is_temp=True,
                 auto_generated=True,
@@ -334,7 +355,7 @@ def create_temp_google_alias(username: str) -> dict:
         existing_count = session.query(GoogleAlias).filter(GoogleAlias.google_account_id == account.id).count()
         alias = GoogleAlias(
             google_account_id=account.id,
-            name=f"Temp Alias {existing_count + 1}",
+            name=_alias_name_from_tag(tag),
             tag=tag,
             is_temp=True,
             auto_generated=True,
