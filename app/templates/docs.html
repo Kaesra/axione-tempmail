@@ -246,7 +246,7 @@ DELETE /api/admin/domains/blacklist/{domain}</code></pre>
     "password": "demo-password"
   }'</code></pre>
                   </div>
-                  <p class="mt-3 text-sm leading-6 text-slate-600">Basarili login sonrasi response cookie set eder. Sonraki isteklerde ayni cookie ile devam edilir.</p>
+                  <p class="mt-3 text-sm leading-6 text-slate-600">Basarili login sonrasi response cookie set eder. Sonraki isteklerde ayni cookie ile devam edilir. Programatik kullanimda bunun yerine API key daha dogru secenektir.</p>
                 </div>
 
                 <div>
@@ -261,7 +261,15 @@ DELETE /api/admin/domains/blacklist/{domain}</code></pre>
                   <p class="mb-3 text-lg font-semibold text-slate-900">2b. API key ile ayni listeyi cek</p>
                   <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
                     <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/inboxes \
-  -H 'X-API-Key: axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
+  -H 'Authorization: Bearer axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">2c. API key ile kimligini dogrula</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/auth/me \
+  -H 'Authorization: Bearer axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
                   </div>
                 </div>
 
@@ -320,6 +328,23 @@ DELETE /api/admin/domains/blacklist/{domain}</code></pre>
                     <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/messages/123 \
   -H 'Cookie: tempmail_session=&lt;session-cookie&gt;'</code></pre>
                   </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">6. Google aliaslarini API key ile cek</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/integrations/google/aliases \
+  -H 'Authorization: Bearer axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="mb-3 text-lg font-semibold text-slate-900">7. Google mesajlarini API key ile cek</p>
+                  <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-slate-100">
+                    <pre class="overflow-x-auto px-5 py-5 text-sm leading-7"><code>curl https://mail.axione.xyz/api/integrations/google/messages \
+  -H 'Authorization: Bearer axm_xxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre>
+                  </div>
+                  <p class="mt-3 text-sm leading-6 text-slate-600">Boylece Google tarafindaki bagli hesap mail akisini session cookie yerine dogrudan API key ile cagirabilirsin.</p>
                 </div>
               </div>
             </section>
@@ -407,7 +432,7 @@ DELETE /api/admin/domains/blacklist/{domain}</code></pre>
                 </div>
                 <div class="rounded-3xl border border-slate-200 p-5">
                   <p class="text-lg font-semibold text-slate-900">Session zorunlu</p>
-                  <p class="mt-2 text-sm leading-6 text-slate-600">Inbox ve mesaj endpoint'lerinin tamami kullanici oturumu ister.</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Inbox, mesaj ve Google entegrasyon endpoint'leri session cookie veya API key ister.</p>
                 </div>
                 <div class="rounded-3xl border border-slate-200 p-5">
                   <p class="text-lg font-semibold text-slate-900">Health endpoint</p>

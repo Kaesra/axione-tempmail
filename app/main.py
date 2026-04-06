@@ -15,6 +15,7 @@ from app.auth_service import (
     approve_user,
     create_api_key,
     ensure_bootstrap_admin,
+    get_authenticated_user,
     get_user_by_session,
     list_pending_users,
     list_api_keys,
@@ -167,7 +168,7 @@ async def auth_logout(request: Request, response: Response) -> AuthMessageRespon
 
 @app.get("/api/auth/me", response_model=AuthStatusResponse)
 async def auth_me(request: Request) -> AuthStatusResponse:
-    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    user = get_authenticated_user(request, request.cookies.get(SESSION_COOKIE))
     return AuthStatusResponse(user=UserResponse(**user) if user else None)
 
 

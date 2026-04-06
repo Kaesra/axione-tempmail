@@ -162,10 +162,15 @@ def get_user_by_api_key(token: str | None) -> dict | None:
         return _public_user(user)
 
 
-def require_user(request: Request, tempmail_session: str | None = Cookie(default=None)) -> dict:
-    user = get_user_by_session(tempmail_session)
+def get_authenticated_user(request: Request, session_token: str | None = None) -> dict | None:
+    user = get_user_by_session(session_token)
     if user is None:
         user = get_user_by_api_key(_extract_api_key(request))
+    return user
+
+
+def require_user(request: Request, tempmail_session: str | None = Cookie(default=None)) -> dict:
+    user = get_authenticated_user(request, tempmail_session)
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication required")
     if not user["is_approved"]:
