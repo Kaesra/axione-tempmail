@@ -3,71 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Axione Mail OS</title>
+    <title>Axione Mail Desk</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --win-panel: rgba(16, 24, 40, 0.84);
-        --win-panel-soft: rgba(14, 21, 34, 0.74);
-        --win-border: rgba(255, 255, 255, 0.12);
-        --win-accent: #0a84ff;
-        --win-accent-soft: rgba(10, 132, 255, 0.18);
-        --win-shadow: 0 20px 70px rgba(0, 0, 0, 0.38);
-      }
-      body {
-        font-family: "Inter", sans-serif;
-        background:
-          linear-gradient(115deg, rgba(8, 24, 54, 0.98) 0%, rgba(12, 39, 84, 0.94) 33%, rgba(5, 17, 36, 0.96) 100%);
-      }
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background:
-          linear-gradient(90deg, transparent 0 61%, rgba(140, 222, 255, 0.08) 61%, rgba(140, 222, 255, 0.28) 67%, rgba(140, 222, 255, 0.08) 73%, transparent 73%),
-          linear-gradient(180deg, transparent 0 38%, rgba(140, 222, 255, 0.08) 38%, rgba(140, 222, 255, 0.22) 50%, rgba(140, 222, 255, 0.08) 62%, transparent 62%),
-          radial-gradient(circle at 67% 46%, rgba(116, 224, 255, 0.28), transparent 18%),
-          linear-gradient(115deg, transparent 0 58%, rgba(122, 214, 255, 0.1) 58%, transparent 76%);
-        mix-blend-mode: screen;
-        opacity: 0.9;
-      }
+      body { font-family: "Roboto", sans-serif; }
       .mono { font-family: "IBM Plex Mono", monospace; }
       .mail-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
       .mail-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 999px; }
       [x-cloak] { display: none !important; }
-      .os-shell {
-        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-        border: 1px solid var(--win-border);
-        box-shadow: var(--win-shadow);
-        backdrop-filter: blur(18px);
-      }
-      .os-window {
-        background: var(--win-panel);
-        border: 1px solid var(--win-border);
-        box-shadow: var(--win-shadow);
-        backdrop-filter: blur(18px);
-      }
-      .os-window-soft {
-        background: var(--win-panel-soft);
-        border: 1px solid var(--win-border);
-        backdrop-filter: blur(16px);
-      }
-      .win-taskbar {
-        background: linear-gradient(180deg, rgba(14, 18, 30, 0.95), rgba(9, 12, 22, 0.98));
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .win-titlebar {
-        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-      }
     </style>
   </head>
-  <body class="min-h-screen text-slate-100">
+  <body class="min-h-screen bg-[#f6f8fc] text-slate-900">
     <script id="initial-state" type="application/json">{{ {
       'acceptedDomains': accepted_domains,
       'pollSeconds': poll_seconds,
@@ -78,36 +28,14 @@
       'googleEnabled': google_enabled,
     } | tojson }}</script>
 
-    <main x-data="window.mailDesk()" x-init="init()" class="min-h-screen px-3 py-3 lg:px-5 lg:py-5">
-      <div class="os-shell min-h-[calc(100vh-24px)] overflow-hidden rounded-[18px]">
-        {% include "partials/header.html" %}
-        {% include "partials/notices.html" %}
+    <main x-data="window.mailDesk()" x-init="init()" class="min-h-screen">
+      {% include "partials/header.html" %}
+      {% include "partials/notices.html" %}
 
-        <div class="flex min-h-[calc(100vh-154px)] gap-4 p-3 lg:p-4">
-          {% include "partials/sidebar.html" %}
-          {% include "partials/mail_list.html" %}
-          {% include "partials/detail_panel.html" %}
-        </div>
-
-        <div class="win-taskbar flex items-center justify-between gap-3 px-3 py-2">
-          <div class="flex items-center gap-2">
-            <button type="button" class="grid h-10 w-10 place-items-center rounded-md bg-[var(--win-accent)] text-white shadow-[0_0_20px_rgba(10,132,255,0.35)]">
-              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h8v8H3V3Zm10 0h8v8h-8V3ZM3 13h8v8H3v-8Zm10 0h8v8h-8v-8Z"/></svg>
-            </button>
-            <div class="flex items-center gap-2 rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300">
-              <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
-              Search Mail OS
-            </div>
-            <div class="hidden items-center gap-2 lg:flex">
-              <span class="rounded-md bg-[var(--win-accent-soft)] px-3 py-2 text-sm text-cyan-100">Mail Explorer</span>
-              <span class="rounded-md bg-white/5 px-3 py-2 text-sm text-slate-400">API Console</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 text-xs text-slate-400">
-            <span class="hidden sm:inline">Axione Secure Workspace</span>
-            <span class="mono rounded-md bg-white/5 px-3 py-2">MAILOS.EXE</span>
-          </div>
-        </div>
+      <div class="flex min-h-[calc(100vh-73px)] gap-4 px-2 pb-4 pt-3 lg:px-4">
+        {% include "partials/sidebar.html" %}
+        {% include "partials/mail_list.html" %}
+        {% include "partials/detail_panel.html" %}
       </div>
 
       {% include "partials/compose_modal.html" %}
