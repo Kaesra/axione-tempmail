@@ -1,34 +1,41 @@
-<header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/35 backdrop-blur-xl">
-  <div class="flex items-center gap-3 px-3 py-3 lg:px-6">
-    <button type="button" class="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">
+<header class="win-titlebar sticky top-0 z-30 backdrop-blur-xl">
+  <div class="flex items-center justify-between gap-3 px-3 py-2.5 lg:px-4">
+    <div class="flex items-center gap-3">
+      <button type="button" class="grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">
       <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
-    <div class="flex items-center gap-3 pr-2">
-      <div class="grid h-12 w-12 place-items-center rounded-2xl border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.18),rgba(59,130,246,0.10))] shadow-[0_0_40px_rgba(56,189,248,0.12)]">
+      </button>
+      <div class="flex items-center gap-3 pr-2">
+        <div class="grid h-11 w-11 place-items-center rounded-md border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.18),rgba(59,130,246,0.10))] shadow-[0_0_40px_rgba(56,189,248,0.12)]">
         <svg class="h-7 w-7 text-cyan-200" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5v-9Z"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 8l8 4 8-4"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 12v8"/>
         </svg>
-      </div>
-      <div>
-        <p class="text-[26px] font-semibold leading-none tracking-tight text-white">Axione Mail OS</p>
-        <p class="mono mt-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">Desktop Mail Workspace</p>
+        </div>
+        <div>
+          <p class="text-[22px] font-semibold leading-none tracking-tight text-white">Axione Mail OS</p>
+          <p class="mono mt-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">Microsoft-Style Workspace Shell</p>
+        </div>
       </div>
     </div>
 
-    <div class="hidden flex-1 lg:block">
-      <div class="flex max-w-3xl items-center gap-3 rounded-[22px] border border-white/10 bg-white/5 px-5 py-3 text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    <div class="hidden flex-1 px-2 lg:block">
+      <div class="flex max-w-3xl items-center gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
         <input x-model="search" type="text" placeholder="Dosya, mail veya domain ara" class="w-full border-0 bg-transparent p-0 text-base text-slate-100 placeholder:text-slate-500 focus:ring-0">
-        <span class="mono rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-400">Explorer Search</span>
+        <span class="mono rounded-md border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-400">Explorer Search</span>
       </div>
     </div>
 
     <div class="ml-auto flex items-center gap-2">
-      <button x-cloak x-show="auth.user" type="button" @click="openCompose()" class="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/20 lg:hidden">Yeni Klasor</button>
-      <a href="/guide" class="hidden rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 lg:block">API Guide</a>
-      <button x-cloak x-show="auth.user" type="button" @click="openAccount()" class="grid h-11 w-11 place-items-center rounded-2xl border border-emerald-400/20 bg-emerald-400/15 text-sm font-bold text-emerald-100" x-text="auth.user ? auth.user.username.slice(0, 1).toUpperCase() : 'A'"></button>
+      <button x-cloak x-show="auth.user" type="button" @click="openCompose()" class="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/20 lg:hidden">Yeni Klasor</button>
+      <a href="/guide" class="hidden rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 lg:block">API Guide</a>
+      <button x-cloak x-show="auth.user" type="button" @click="openAccount()" class="grid h-10 w-10 place-items-center rounded-md border border-emerald-400/20 bg-emerald-400/15 text-sm font-bold text-emerald-100" x-text="auth.user ? auth.user.username.slice(0, 1).toUpperCase() : 'A'"></button>
+      <div class="hidden items-center gap-1 pl-2 text-slate-500 lg:flex">
+        <span class="h-3 w-3 rounded-full bg-white/20"></span>
+        <span class="h-3 w-3 rounded-full bg-white/20"></span>
+        <span class="h-3 w-3 rounded-full bg-red-400/80"></span>
+      </div>
     </div>
   </div>
 </header>

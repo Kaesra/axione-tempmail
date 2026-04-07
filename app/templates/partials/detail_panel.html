@@ -1,6 +1,6 @@
 <aside x-cloak x-show="auth.user && !messageViewOpen" class="hidden w-[380px] shrink-0 xl:block">
   <div class="sticky top-[92px] space-y-4">
-    <div class="os-window rounded-[26px] p-5">
+    <div class="os-window rounded-[8px] p-5">
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-cyan-300">File Preview</p>
@@ -12,40 +12,40 @@
 
       <div class="mt-4 flex flex-wrap gap-2">
         <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
-          <button type="button" @click="copyText(code)" class="mono rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-200" x-text="code"></button>
+          <button type="button" @click="copyText(code)" class="mono rounded-md bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-200" x-text="code"></button>
         </template>
-        <button x-show="selectedMessageDetail?.verification_link" type="button" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-cyan-500 px-3 py-2 text-xs font-medium text-slate-950">verify.url</button>
+        <button x-show="selectedMessageDetail?.verification_link" type="button" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-md bg-cyan-500 px-3 py-2 text-xs font-medium text-slate-950">verify.url</button>
       </div>
 
       <div class="mt-4 space-y-3">
-        <div class="rounded-2xl bg-white/[0.03] p-4">
+        <div class="rounded-[8px] bg-white/[0.03] p-4">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Open Folder</p>
           <p class="mt-1 break-all text-sm font-medium text-white" x-text="activeInbox ? activeInbox.address : '-' "></p>
           <p class="mt-2 text-xs text-slate-500" x-text="activeInbox ? inboxBadge(activeInbox) : ''"></p>
         </div>
-        <div class="rounded-2xl bg-white/[0.03] p-4">
+        <div class="rounded-[8px] bg-white/[0.03] p-4">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Source Domain</p>
           <p class="mt-1 break-all text-sm font-medium text-white" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
         </div>
       </div>
 
-      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-2xl bg-slate-950/35 p-4">
+      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-[8px] bg-slate-950/35 p-4">
         <pre class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-200" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : 'Mesaj secildiginde burada acilir.'"></pre>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[8px] p-5">
       <div class="flex items-center justify-between gap-3">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-sky-300">System Monitor</p>
           <h3 class="mt-2 text-lg font-medium text-white">Tum mailbox gorunumu</h3>
           <p class="mt-2 text-sm text-slate-500">Tum kullanici klasorlerini tek pencerede izle.</p>
         </div>
-        <button type="button" @click="openAdminMonitor()" class="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950">Paneli Ac</button>
+        <button type="button" @click="openAdminMonitor()" class="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950">Paneli Ac</button>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[8px] p-5">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-amber-300">Admin Queue</p>
@@ -54,20 +54,20 @@
         <button type="button" @click="loadPendingUsers()" class="text-sm font-medium text-cyan-300">Yenile</button>
       </div>
       <div class="mt-4 space-y-2">
-        <template x-if="!pendingUsers.length"><p class="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kayit yok.</p></template>
+        <template x-if="!pendingUsers.length"><p class="rounded-[8px] bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kayit yok.</p></template>
         <template x-for="user in pendingUsers" :key="user.id">
-          <div class="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3">
+          <div class="flex items-center justify-between rounded-[8px] bg-white/[0.03] px-4 py-3">
             <div>
               <p class="text-sm font-medium text-white" x-text="user.username"></p>
               <p class="text-xs text-slate-500" x-text="formatDate(user.created_at)"></p>
             </div>
-            <button type="button" @click="approveUser(user.id)" class="rounded-full bg-emerald-500 px-3 py-2 text-xs font-medium text-slate-950">Onayla</button>
+            <button type="button" @click="approveUser(user.id)" class="rounded-md bg-emerald-500 px-3 py-2 text-xs font-medium text-slate-950">Onayla</button>
           </div>
         </template>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[8px] p-5">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-indigo-300">Personal Queue</p>
@@ -76,16 +76,16 @@
         <button type="button" @click="loadPendingPersonalInboxes()" class="text-sm font-medium text-cyan-300">Yenile</button>
       </div>
       <div class="mt-4 space-y-2">
-        <template x-if="!pendingPersonalInboxes.length"><p class="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kisisel inbox yok.</p></template>
+        <template x-if="!pendingPersonalInboxes.length"><p class="rounded-[8px] bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kisisel inbox yok.</p></template>
         <template x-for="inbox in pendingPersonalInboxes" :key="inbox.id">
-          <div class="rounded-2xl bg-white/[0.03] px-4 py-3">
+          <div class="rounded-[8px] bg-white/[0.03] px-4 py-3">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <p class="text-sm font-medium text-white" x-text="inbox.profile_name"></p>
                 <p class="text-xs text-slate-500" x-text="inbox.address"></p>
                 <p class="mt-1 text-xs text-slate-400" x-text="`Sahip: ${inbox.owner_username}`"></p>
               </div>
-              <button type="button" @click="approvePersonalInbox(inbox.id)" class="rounded-full bg-indigo-500 px-3 py-2 text-xs font-medium text-white">Onayla</button>
+              <button type="button" @click="approvePersonalInbox(inbox.id)" class="rounded-md bg-indigo-500 px-3 py-2 text-xs font-medium text-white">Onayla</button>
             </div>
           </div>
         </template>

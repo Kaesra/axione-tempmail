@@ -1,4 +1,4 @@
-<section x-cloak x-show="auth.user" class="os-window min-w-0 flex-1 rounded-[26px] xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
+<section x-cloak x-show="auth.user" class="os-window min-w-0 flex-1 rounded-[8px] xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
   <div x-show="auth.user && (!messageViewOpen || !selectedMessageDetail)" class="flex h-full min-h-[760px] flex-col">
     <div class="border-b border-white/10 px-5 py-4">
       <div class="flex items-start justify-between gap-4">
@@ -8,8 +8,8 @@
           <p class="mt-1 text-sm text-slate-400" x-text="activeInbox ? activeInbox.address : 'Soldan bir klasor sec' "></p>
         </div>
         <div class="flex items-center gap-3 text-slate-400">
-          <button type="button" class="rounded-xl border border-white/10 bg-white/5 p-2.5 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-          <button type="button" @click="fetchInboxes(); refreshMessages()" class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-cyan-200 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
+          <button type="button" class="rounded-md border border-white/10 bg-white/5 p-2.5 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+          <button type="button" @click="fetchInboxes(); refreshMessages()" class="rounded-md border border-white/10 bg-white/5 p-2.5 text-cyan-200 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
         </div>
       </div>
       <div class="mt-4 flex items-center justify-between gap-3">
@@ -49,7 +49,7 @@
     <div class="mail-scroll flex-1 overflow-auto">
       <template x-if="!filteredMessages().length">
         <div class="grid h-full min-h-[520px] place-items-center px-6 text-center text-slate-400">
-          <div class="rounded-[28px] border border-white/10 bg-white/[0.03] px-8 py-10">
+          <div class="rounded-[8px] border border-white/10 bg-white/[0.03] px-8 py-10">
             <p class="text-lg font-medium text-white">Dosya bulunamadi</p>
             <p class="mt-2 text-sm" x-text="messages.length ? 'Bu panelde secili filtreye uyan dosya yok.' : 'Bir mailbox klasoru sec veya yeni klasor olustur.'"></p>
             <button x-show="messages.length && filter.mode !== 'all'" type="button" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-white/10 px-5 py-2.5 text-sm font-medium text-slate-200">Tum dosyalari goster</button>
@@ -60,7 +60,7 @@
 
       <template x-for="message in filteredMessages()" :key="message.id">
         <button type="button" @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'bg-cyan-400/10' : (message.is_unread ? 'bg-white/[0.03]' : 'bg-transparent')" class="grid w-full grid-cols-[44px_minmax(160px,220px)_minmax(0,1fr)_90px] items-center gap-4 border-b border-white/6 px-5 py-3 text-left transition hover:bg-white/[0.04]">
-          <div class="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-cyan-200">
+          <div class="grid h-11 w-11 place-items-center rounded-md border border-white/10 bg-white/[0.03] text-cyan-200">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4h7l5 5v11a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 4v5h5"/></svg>
           </div>
           <div class="min-w-0 text-sm">
@@ -81,11 +81,11 @@
   <div x-show="auth.user && messageViewOpen && selectedMessageDetail" class="flex h-full min-h-[760px] flex-col">
     <div class="flex items-center justify-between border-b border-white/10 px-5 py-3">
       <div class="flex items-center gap-2 text-slate-400">
-        <button type="button" @click="closeMessageView()" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10">
+        <button type="button" @click="closeMessageView()" class="rounded-md border border-white/10 bg-white/5 p-2 hover:bg-white/10">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button type="button" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-        <button type="button" @click="deleteSelectedMessage()" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
+        <button type="button" class="rounded-md border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+        <button type="button" @click="deleteSelectedMessage()" class="rounded-md border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
       </div>
       <div class="flex items-center gap-2 text-slate-500">
         <button type="button" @click="toggleSelectedUnread()" class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-white/10">Okundu</button>
@@ -101,7 +101,7 @@
               <span class="rounded-md bg-white/5 px-2 py-1 text-xs text-slate-300" x-text="selectedMessage?.message_category || 'primary'"></span>
             </div>
             <div class="mt-6 flex items-center gap-4">
-              <div class="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/5 text-lg font-medium text-cyan-200" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from || 'M').slice(0,1).toUpperCase() : 'M'"></div>
+              <div class="grid h-12 w-12 place-items-center rounded-md border border-white/10 bg-white/5 text-lg font-medium text-cyan-200" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from || 'M').slice(0,1).toUpperCase() : 'M'"></div>
               <div>
                 <p class="text-base font-medium text-white" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from) : '-' "></p>
                 <p class="mt-1 text-sm text-slate-500">
@@ -120,20 +120,20 @@
           </div>
         </div>
 
-        <div class="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-6 shadow-sm">
+        <div class="mt-6 rounded-[8px] border border-white/10 bg-white/[0.03] p-6 shadow-sm">
           <template x-if="selectedMessageDetail && selectedMessageDetail.html_body">
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white">
+            <div class="overflow-hidden rounded-[8px] border border-white/10 bg-white">
               <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-400">message.html</div>
               <iframe class="min-h-[560px] w-full bg-white" sandbox="allow-popups allow-popups-to-escape-sandbox" :srcdoc="selectedMessageDetail ? selectedMessageDetail.html_body : ''"></iframe>
             </div>
           </template>
 
-          <div class="mt-6 rounded-2xl bg-slate-950/45 p-5">
+          <div class="mt-6 rounded-[8px] bg-slate-950/45 p-5">
             <p class="mb-3 text-xs uppercase tracking-[0.2em] text-slate-500">message.txt</p>
             <pre class="whitespace-pre-wrap break-words text-[15px] leading-7 text-slate-200" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : ''"></pre>
           </div>
 
-          <details class="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+          <details class="mt-6 rounded-[8px] border border-white/10 bg-white/[0.02] p-5">
             <summary class="cursor-pointer text-sm font-medium text-slate-200">headers.log</summary>
             <pre class="mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-400" x-text="selectedMessageDetail?.raw_headers || ''"></pre>
           </details>
