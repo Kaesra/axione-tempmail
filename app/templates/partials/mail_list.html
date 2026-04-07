@@ -1,95 +1,109 @@
-<section class="min-w-0 flex-1 rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200 xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
+<section x-cloak x-show="auth.user" class="os-window min-w-0 flex-1 rounded-[26px] xl:col-span-1" :class="messageViewOpen ? 'xl:col-span-2' : ''">
   <div x-show="auth.user && (!messageViewOpen || !selectedMessageDetail)" class="flex h-full min-h-[760px] flex-col">
-    <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-      <div class="flex items-center gap-3 text-slate-600">
-        <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
-        <button class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-        <button @click="fetchInboxes(); refreshMessages()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
+    <div class="border-b border-white/10 px-5 py-4">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="mono text-[11px] uppercase tracking-[0.24em] text-cyan-300">Explorer Pane</p>
+          <h2 class="mt-2 text-2xl font-semibold tracking-tight text-white" x-text="activeInbox ? (activeInbox.profile_name || 'Mailbox Folder') : 'Mailbox Folder'"></h2>
+          <p class="mt-1 text-sm text-slate-400" x-text="activeInbox ? activeInbox.address : 'Soldan bir klasor sec' "></p>
+        </div>
+        <div class="flex items-center gap-3 text-slate-400">
+          <button type="button" class="rounded-xl border border-white/10 bg-white/5 p-2.5 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+          <button type="button" @click="fetchInboxes(); refreshMessages()" class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-cyan-200 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 12a8 8 0 0 1 13.657-5.657M20 12a8 8 0 0 1-13.657 5.657"/></svg></button>
+        </div>
       </div>
-      <div class="flex items-center gap-2 text-xs text-slate-500">
-        <span x-text="messageCounterLabel()"></span>
+      <div class="mt-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 text-slate-500">
+          <input type="checkbox" class="rounded border-slate-500 bg-transparent text-cyan-500 focus:ring-cyan-500">
+          <span class="text-xs uppercase tracking-[0.18em] text-slate-500">TXT / HTML / CODE VIEW</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span x-text="messageCounterLabel()"></span>
+        </div>
       </div>
     </div>
 
-    <div class="flex border-b border-slate-200 text-sm">
-      <button @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[160px]">
+    <div class="flex border-b border-white/10 bg-white/[0.02] text-sm">
+      <button type="button" @click="filter.mode = 'all'" :class="filter.mode === 'all' ? 'border-b-2 border-cyan-400 bg-white/[0.04] text-cyan-200' : 'text-slate-400 hover:bg-white/[0.04]'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[160px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-        Tumu
+        Tum Dosyalar
       </button>
-      <button @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'primary'" :class="filter.mode === 'primary' ? 'border-b-2 border-cyan-400 bg-white/[0.04] text-cyan-200' : 'text-slate-400 hover:bg-white/[0.04]'" class="flex flex-1 items-center gap-3 px-4 py-4 font-medium lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 5.75A1.75 1.75 0 0 1 4.75 4h10.5A1.75 1.75 0 0 1 17 5.75v8.5A1.75 1.75 0 0 1 15.25 16H4.75A1.75 1.75 0 0 1 3 14.25v-8.5Z"/></svg>
-        Birincil
+        Inbox TXT
       </button>
-      <button @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'social'" :class="filter.mode === 'social' ? 'border-b-2 border-cyan-400 bg-white/[0.04] text-cyan-200' : 'text-slate-400 hover:bg-white/[0.04]'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m9 12 2 2 4-4"/><path stroke-linecap="round" d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z"/></svg>
-        Sosyal
+        Social Logs
       </button>
-      <button @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'spam'" :class="filter.mode === 'spam' ? 'border-b-2 border-cyan-400 bg-white/[0.04] text-cyan-200' : 'text-slate-400 hover:bg-white/[0.04]'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v4"/><path stroke-linecap="round" d="M12 17h.01"/><path stroke-linecap="round" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
-        Spam
+        Spam Bin
       </button>
-      <button @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-[#0b57d0] bg-white text-[#0b57d0]' : 'text-slate-600 hover:bg-slate-50'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
+      <button type="button" @click="filter.mode = 'verification'" :class="filter.mode === 'verification' ? 'border-b-2 border-cyan-400 bg-white/[0.04] text-cyan-200' : 'text-slate-400 hover:bg-white/[0.04]'" class="hidden flex-1 items-center gap-3 px-4 py-4 font-medium lg:flex lg:max-w-[180px]">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 2"/></svg>
-        Verify
+        Verify Codes
       </button>
     </div>
 
     <div class="mail-scroll flex-1 overflow-auto">
       <template x-if="!filteredMessages().length">
-        <div class="grid h-full min-h-[520px] place-items-center px-6 text-center text-slate-500">
-          <div>
-            <p class="text-lg font-medium text-slate-700">Mesaj yok</p>
-            <p class="mt-2 text-sm" x-text="messages.length ? 'Bu filtrede mesaj yok. Tum sekmesine gecmeyi dene.' : 'Inbox sec, filtreyi degistir veya yeni mail bekle.'"></p>
-            <button x-show="messages.length && filter.mode !== 'all'" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700">Tum mailleri goster</button>
-            <button @click="openCompose()" class="mt-4 rounded-full bg-[#1a73e8] px-5 py-2.5 text-sm font-medium text-white">Yeni Inbox Olustur</button>
+        <div class="grid h-full min-h-[520px] place-items-center px-6 text-center text-slate-400">
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.03] px-8 py-10">
+            <p class="text-lg font-medium text-white">Dosya bulunamadi</p>
+            <p class="mt-2 text-sm" x-text="messages.length ? 'Bu panelde secili filtreye uyan dosya yok.' : 'Bir mailbox klasoru sec veya yeni klasor olustur.'"></p>
+            <button x-show="messages.length && filter.mode !== 'all'" type="button" @click="filter.mode = 'all'" class="mt-4 rounded-full border border-white/10 px-5 py-2.5 text-sm font-medium text-slate-200">Tum dosyalari goster</button>
+            <button type="button" @click="openCompose()" class="mt-4 rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950">Yeni Klasor Olustur</button>
           </div>
         </div>
       </template>
 
       <template x-for="message in filteredMessages()" :key="message.id">
-        <button @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'bg-[#f2f6fc]' : (message.is_unread ? 'bg-white' : 'bg-slate-50/80')" class="grid w-full grid-cols-[24px_24px_minmax(140px,220px)_minmax(0,1fr)_90px] items-center gap-3 border-b border-slate-200 px-4 py-2 text-left hover:shadow-[inset_0_-1px_0_0_rgb(226_232_240)]">
-          <span class="h-2.5 w-2.5 rounded-full" :class="message.is_unread ? 'bg-[#1a73e8]' : 'bg-transparent'"></span>
-          <svg class="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m12 17.5 6.18 3.25-1.18-6.88L22 9l-6.9-1-3.1-6.25L8.9 8 2 9l4.99 4.87-1.17 6.88z"/></svg>
-          <div class="min-w-0 text-sm" :class="message.is_unread ? 'font-bold text-slate-900' : 'text-slate-700'" x-text="message.sender_domain || message.mail_from"></div>
-          <div class="min-w-0 text-sm text-slate-700">
-            <span class="font-medium" x-text="message.subject || 'Konu yok'"></span>
-            <span class="mx-1 text-slate-400">-</span>
-            <span class="text-slate-500" x-text="message.summary || 'Onizleme yok'"></span>
-            <span x-show="Array.isArray(message.codes) && message.codes.length" class="mono ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-700" x-text="Array.isArray(message.codes) ? message.codes[0] : ''"></span>
-            <span x-show="message.message_category !== 'primary'" class="mono ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-sky-700" x-text="message.message_category"></span>
+        <button type="button" @click="loadMessage(message.id)" :class="selectedMessage && selectedMessage.id === message.id ? 'bg-cyan-400/10' : (message.is_unread ? 'bg-white/[0.03]' : 'bg-transparent')" class="grid w-full grid-cols-[44px_minmax(160px,220px)_minmax(0,1fr)_90px] items-center gap-4 border-b border-white/6 px-5 py-3 text-left transition hover:bg-white/[0.04]">
+          <div class="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-cyan-200">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4h7l5 5v11a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 4v5h5"/></svg>
           </div>
-          <div class="justify-self-end text-xs" :class="message.is_unread ? 'font-bold text-slate-700' : 'text-slate-500'" x-text="formatDate(message.received_at)"></div>
+          <div class="min-w-0 text-sm">
+            <p class="truncate" :class="message.is_unread ? 'font-semibold text-white' : 'text-slate-200'" x-text="`${message.sender_domain || message.mail_from || 'unknown-source'}.txt`"></p>
+            <p class="mt-1 truncate text-xs text-slate-500" x-text="message.subject || 'Konu yok'"></p>
+          </div>
+          <div class="min-w-0 text-sm text-slate-300">
+            <span class="font-medium text-slate-100" x-text="message.summary || 'Onizleme yok'"></span>
+            <span x-show="Array.isArray(message.codes) && message.codes.length" class="mono ml-2 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-200" x-text="Array.isArray(message.codes) ? message.codes[0] : ''"></span>
+            <span x-show="message.message_category !== 'primary'" class="mono ml-2 rounded-full bg-cyan-400/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-cyan-200" x-text="message.message_category"></span>
+          </div>
+          <div class="justify-self-end text-right text-xs" :class="message.is_unread ? 'font-bold text-slate-200' : 'text-slate-500'" x-text="formatDate(message.received_at)"></div>
         </button>
       </template>
     </div>
   </div>
 
   <div x-show="auth.user && messageViewOpen && selectedMessageDetail" class="flex h-full min-h-[760px] flex-col">
-    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-      <div class="flex items-center gap-2 text-slate-600">
-        <button @click="closeMessageView()" class="rounded-full p-2 hover:bg-slate-100">
+    <div class="flex items-center justify-between border-b border-white/10 px-5 py-3">
+      <div class="flex items-center gap-2 text-slate-400">
+        <button type="button" @click="closeMessageView()" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
-        <button @click="deleteSelectedMessage()" class="rounded-full p-2 hover:bg-slate-100"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
+        <button type="button" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582M20 11A8 8 0 1 0 6.582 9"/></svg></button>
+        <button type="button" @click="deleteSelectedMessage()" class="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M8 6V4h8v2"/><path stroke-linecap="round" d="m19 6-1 14H6L5 6"/></svg></button>
       </div>
       <div class="flex items-center gap-2 text-slate-500">
-        <button @click="toggleSelectedUnread()" class="rounded-full px-3 py-2 text-xs font-medium hover:bg-slate-100">Okundu</button>
+        <button type="button" @click="toggleSelectedUnread()" class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-white/10">Okundu</button>
       </div>
     </div>
 
     <div class="mail-scroll flex-1 overflow-auto px-8 py-8">
       <div class="mx-auto max-w-5xl">
-        <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-6">
+        <div class="flex items-start justify-between gap-4 border-b border-white/10 pb-6">
           <div>
             <div class="flex items-center gap-3">
-              <h1 class="text-[34px] font-normal tracking-tight text-slate-900" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Mesaj secilmedi'"></h1>
-              <span class="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600" x-text="selectedMessage?.message_category || 'primary'"></span>
+              <h1 class="text-[34px] font-normal tracking-tight text-white" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Mesaj secilmedi'"></h1>
+              <span class="rounded-md bg-white/5 px-2 py-1 text-xs text-slate-300" x-text="selectedMessage?.message_category || 'primary'"></span>
             </div>
             <div class="mt-6 flex items-center gap-4">
-              <div class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-lg font-medium text-slate-600" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from || 'M').slice(0,1).toUpperCase() : 'M'"></div>
+              <div class="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/5 text-lg font-medium text-cyan-200" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from || 'M').slice(0,1).toUpperCase() : 'M'"></div>
               <div>
-                <p class="text-base font-medium text-slate-900" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from) : '-' "></p>
+                <p class="text-base font-medium text-white" x-text="selectedMessageDetail ? (selectedMessageDetail.sender_domain || selectedMessageDetail.mail_from) : '-' "></p>
                 <p class="mt-1 text-sm text-slate-500">
                   <span x-text="selectedMessageDetail?.mail_from || '-' "></span>
                   <span class="mx-2">-</span>
@@ -100,28 +114,28 @@
           </div>
           <div class="flex flex-wrap justify-end gap-2">
             <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
-              <button @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700" x-text="code"></button>
+              <button type="button" @click="copyText(code)" class="mono rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-200" x-text="code"></button>
             </template>
-            <button x-show="selectedMessageDetail?.verification_link" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white">Dogrulama Linki</button>
+            <button x-show="selectedMessageDetail?.verification_link" type="button" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950">Dogrulama Linki</button>
           </div>
         </div>
 
-        <div class="mt-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-6 shadow-sm">
           <template x-if="selectedMessageDetail && selectedMessageDetail.html_body">
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-400">HTML Onizleme</div>
+            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white">
+              <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-400">message.html</div>
               <iframe class="min-h-[560px] w-full bg-white" sandbox="allow-popups allow-popups-to-escape-sandbox" :srcdoc="selectedMessageDetail ? selectedMessageDetail.html_body : ''"></iframe>
             </div>
           </template>
 
-          <div class="mt-6 rounded-2xl bg-slate-50 p-5">
-            <p class="mb-3 text-xs uppercase tracking-[0.2em] text-slate-400">Metin Icerik</p>
-            <pre class="whitespace-pre-wrap break-words text-[15px] leading-7 text-slate-700" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : ''"></pre>
+          <div class="mt-6 rounded-2xl bg-slate-950/45 p-5">
+            <p class="mb-3 text-xs uppercase tracking-[0.2em] text-slate-500">message.txt</p>
+            <pre class="whitespace-pre-wrap break-words text-[15px] leading-7 text-slate-200" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : ''"></pre>
           </div>
 
-          <details class="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-            <summary class="cursor-pointer text-sm font-medium text-slate-700">Raw Headers</summary>
-            <pre class="mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-500" x-text="selectedMessageDetail?.raw_headers || ''"></pre>
+          <details class="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+            <summary class="cursor-pointer text-sm font-medium text-slate-200">headers.log</summary>
+            <pre class="mt-4 whitespace-pre-wrap break-words text-xs leading-6 text-slate-400" x-text="selectedMessageDetail?.raw_headers || ''"></pre>
           </details>
         </div>
       </div>

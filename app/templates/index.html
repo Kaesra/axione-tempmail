@@ -3,21 +3,52 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Axione Mail Desk</title>
+    <title>Axione Mail OS</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-      body { font-family: "Roboto", sans-serif; }
+      :root {
+        --os-bg: #0b1020;
+        --os-panel: rgba(18, 25, 47, 0.88);
+        --os-panel-soft: rgba(21, 31, 58, 0.72);
+        --os-border: rgba(148, 163, 184, 0.16);
+        --os-glow: 0 18px 60px rgba(2, 6, 23, 0.45);
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 28%),
+          radial-gradient(circle at 85% 12%, rgba(59, 130, 246, 0.12), transparent 22%),
+          radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.12), transparent 24%),
+          linear-gradient(180deg, #0b1020 0%, #10182d 42%, #0a1020 100%);
+      }
       .mono { font-family: "IBM Plex Mono", monospace; }
       .mail-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
       .mail-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 999px; }
       [x-cloak] { display: none !important; }
+      .os-shell {
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+        border: 1px solid var(--os-border);
+        box-shadow: var(--os-glow);
+        backdrop-filter: blur(18px);
+      }
+      .os-window {
+        background: var(--os-panel);
+        border: 1px solid var(--os-border);
+        box-shadow: var(--os-glow);
+        backdrop-filter: blur(18px);
+      }
+      .os-window-soft {
+        background: var(--os-panel-soft);
+        border: 1px solid var(--os-border);
+        backdrop-filter: blur(16px);
+      }
     </style>
   </head>
-  <body class="min-h-screen bg-[#f6f8fc] text-slate-900">
+  <body class="min-h-screen text-slate-100">
     <script id="initial-state" type="application/json">{{ {
       'acceptedDomains': accepted_domains,
       'pollSeconds': poll_seconds,
@@ -28,14 +59,16 @@
       'googleEnabled': google_enabled,
     } | tojson }}</script>
 
-    <main x-data="window.mailDesk()" x-init="init()" class="min-h-screen">
-      {% include "partials/header.html" %}
-      {% include "partials/notices.html" %}
+    <main x-data="window.mailDesk()" x-init="init()" class="min-h-screen px-3 py-3 lg:px-5 lg:py-5">
+      <div class="os-shell min-h-[calc(100vh-24px)] overflow-hidden rounded-[28px]">
+        {% include "partials/header.html" %}
+        {% include "partials/notices.html" %}
 
-      <div class="flex min-h-[calc(100vh-73px)] gap-4 px-2 pb-4 pt-3 lg:px-4">
-        {% include "partials/sidebar.html" %}
-        {% include "partials/mail_list.html" %}
-        {% include "partials/detail_panel.html" %}
+        <div class="flex min-h-[calc(100vh-118px)] gap-4 p-3 lg:p-4">
+          {% include "partials/sidebar.html" %}
+          {% include "partials/mail_list.html" %}
+          {% include "partials/detail_panel.html" %}
+        </div>
       </div>
 
       {% include "partials/compose_modal.html" %}

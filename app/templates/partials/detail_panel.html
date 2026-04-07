@@ -1,91 +1,91 @@
-<aside class="hidden w-[380px] shrink-0 xl:block" x-show="!messageViewOpen">
+<aside x-cloak x-show="auth.user && !messageViewOpen" class="hidden w-[380px] shrink-0 xl:block">
   <div class="sticky top-[92px] space-y-4">
-    <div class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div class="os-window rounded-[26px] p-5">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <p class="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Mesaj Detayi</p>
-          <h2 class="mt-2 text-xl font-medium text-slate-900" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Mesaj secilmedi'"></h2>
-          <p class="mt-2 text-sm text-slate-500" x-text="selectedMessage ? selectedMessage.mail_from : 'Soldaki listeden secim yap'"></p>
+          <p class="text-xs font-medium uppercase tracking-[0.24em] text-cyan-300">File Preview</p>
+          <h2 class="mt-2 text-xl font-medium text-white" x-text="selectedMessage ? (selectedMessage.subject || 'Konu yok') : 'Dosya secilmedi'"></h2>
+          <p class="mt-2 text-sm text-slate-500" x-text="selectedMessage ? selectedMessage.mail_from : 'Soldaki explorer listesinden secim yap'"></p>
         </div>
-        <button @click="toggleSelectedUnread()" :disabled="!selectedMessage" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 disabled:opacity-40">Okundu</button>
+        <button type="button" @click="toggleSelectedUnread()" :disabled="!selectedMessage" class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-200 disabled:opacity-40">Okundu</button>
       </div>
 
       <div class="mt-4 flex flex-wrap gap-2">
         <template x-for="code in (selectedMessageDetail?.codes || [])" :key="code">
-          <button @click="copyText(code)" class="mono rounded-full bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700" x-text="code"></button>
+          <button type="button" @click="copyText(code)" class="mono rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-200" x-text="code"></button>
         </template>
-        <button x-show="selectedMessageDetail?.verification_link" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-[#1a73e8] px-3 py-2 text-xs font-medium text-white">Linki Ac</button>
+        <button x-show="selectedMessageDetail?.verification_link" type="button" @click="openLink(selectedMessageDetail.verification_link)" class="rounded-full bg-cyan-500 px-3 py-2 text-xs font-medium text-slate-950">verify.url</button>
       </div>
 
       <div class="mt-4 space-y-3">
-        <div class="rounded-2xl bg-slate-50 p-4">
-          <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Aktif Inbox</p>
-          <p class="mt-1 break-all text-sm font-medium text-slate-900" x-text="activeInbox ? activeInbox.address : '-' "></p>
+        <div class="rounded-2xl bg-white/[0.03] p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Open Folder</p>
+          <p class="mt-1 break-all text-sm font-medium text-white" x-text="activeInbox ? activeInbox.address : '-' "></p>
           <p class="mt-2 text-xs text-slate-500" x-text="activeInbox ? inboxBadge(activeInbox) : ''"></p>
         </div>
-        <div class="rounded-2xl bg-slate-50 p-4">
-          <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Kaynak</p>
-          <p class="mt-1 break-all text-sm font-medium text-slate-900" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
+        <div class="rounded-2xl bg-white/[0.03] p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Source Domain</p>
+          <p class="mt-1 break-all text-sm font-medium text-white" x-text="selectedMessageDetail?.sender_domain || '-' "></p>
         </div>
       </div>
 
-      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-2xl bg-slate-50 p-4">
-        <pre class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : 'Mesaj secildiginde burada acilir.'"></pre>
+      <div class="mail-scroll mt-4 max-h-[380px] overflow-auto rounded-2xl bg-slate-950/35 p-4">
+        <pre class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-200" x-text="selectedMessageDetail ? (selectedMessageDetail.text_body || selectedMessageDetail.html_body || 'Icerik bulunamadi') : 'Mesaj secildiginde burada acilir.'"></pre>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <p class="text-xs font-medium uppercase tracking-[0.24em] text-sky-500">Admin Monitor</p>
-          <h3 class="mt-2 text-lg font-medium text-slate-900">Tum mailbox gorunumu</h3>
-          <p class="mt-2 text-sm text-slate-500">Kimin inbox'una ne gelmis, kimden gelmis ve icerigi ne aninda gorebilirsin.</p>
+          <p class="text-xs font-medium uppercase tracking-[0.24em] text-sky-300">System Monitor</p>
+          <h3 class="mt-2 text-lg font-medium text-white">Tum mailbox gorunumu</h3>
+          <p class="mt-2 text-sm text-slate-500">Tum kullanici klasorlerini tek pencerede izle.</p>
         </div>
-        <button @click="openAdminMonitor()" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Paneli Ac</button>
+        <button type="button" @click="openAdminMonitor()" class="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950">Paneli Ac</button>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-xs font-medium uppercase tracking-[0.24em] text-amber-500">Admin Onayi</p>
-          <h3 class="mt-2 text-lg font-medium text-slate-900">Bekleyen Kayitlar</h3>
+          <p class="text-xs font-medium uppercase tracking-[0.24em] text-amber-300">Admin Queue</p>
+          <h3 class="mt-2 text-lg font-medium text-white">Bekleyen Kayitlar</h3>
         </div>
-        <button @click="loadPendingUsers()" class="text-sm font-medium text-[#1a73e8]">Yenile</button>
+        <button type="button" @click="loadPendingUsers()" class="text-sm font-medium text-cyan-300">Yenile</button>
       </div>
       <div class="mt-4 space-y-2">
-        <template x-if="!pendingUsers.length"><p class="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Bekleyen kayit yok.</p></template>
+        <template x-if="!pendingUsers.length"><p class="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kayit yok.</p></template>
         <template x-for="user in pendingUsers" :key="user.id">
-          <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+          <div class="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3">
             <div>
-              <p class="text-sm font-medium text-slate-900" x-text="user.username"></p>
+              <p class="text-sm font-medium text-white" x-text="user.username"></p>
               <p class="text-xs text-slate-500" x-text="formatDate(user.created_at)"></p>
             </div>
-            <button @click="approveUser(user.id)" class="rounded-full bg-emerald-600 px-3 py-2 text-xs font-medium text-white">Onayla</button>
+            <button type="button" @click="approveUser(user.id)" class="rounded-full bg-emerald-500 px-3 py-2 text-xs font-medium text-slate-950">Onayla</button>
           </div>
         </template>
       </div>
     </div>
 
-    <div x-show="auth.user && auth.user.is_admin" class="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div x-show="auth.user && auth.user.is_admin" class="os-window rounded-[26px] p-5">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-xs font-medium uppercase tracking-[0.24em] text-indigo-500">Kisisel Inbox</p>
-          <h3 class="mt-2 text-lg font-medium text-slate-900">Onay Bekleyen Kisisel Kutular</h3>
+          <p class="text-xs font-medium uppercase tracking-[0.24em] text-indigo-300">Personal Queue</p>
+          <h3 class="mt-2 text-lg font-medium text-white">Onay Bekleyen Kisisel Kutular</h3>
         </div>
-        <button @click="loadPendingPersonalInboxes()" class="text-sm font-medium text-[#1a73e8]">Yenile</button>
+        <button type="button" @click="loadPendingPersonalInboxes()" class="text-sm font-medium text-cyan-300">Yenile</button>
       </div>
       <div class="mt-4 space-y-2">
-        <template x-if="!pendingPersonalInboxes.length"><p class="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Bekleyen kisisel inbox yok.</p></template>
+        <template x-if="!pendingPersonalInboxes.length"><p class="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-slate-500">Bekleyen kisisel inbox yok.</p></template>
         <template x-for="inbox in pendingPersonalInboxes" :key="inbox.id">
-          <div class="rounded-2xl bg-slate-50 px-4 py-3">
+          <div class="rounded-2xl bg-white/[0.03] px-4 py-3">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <p class="text-sm font-medium text-slate-900" x-text="inbox.profile_name"></p>
+                <p class="text-sm font-medium text-white" x-text="inbox.profile_name"></p>
                 <p class="text-xs text-slate-500" x-text="inbox.address"></p>
                 <p class="mt-1 text-xs text-slate-400" x-text="`Sahip: ${inbox.owner_username}`"></p>
               </div>
-              <button @click="approvePersonalInbox(inbox.id)" class="rounded-full bg-indigo-600 px-3 py-2 text-xs font-medium text-white">Onayla</button>
+              <button type="button" @click="approvePersonalInbox(inbox.id)" class="rounded-full bg-indigo-500 px-3 py-2 text-xs font-medium text-white">Onayla</button>
             </div>
           </div>
         </template>

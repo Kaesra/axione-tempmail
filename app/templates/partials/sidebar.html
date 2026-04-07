@@ -1,35 +1,59 @@
-<aside class="hidden w-[256px] shrink-0 lg:block">
-  <div class="sticky top-[92px] space-y-3">
-    <button @click="openCompose()" class="flex h-14 items-center gap-4 rounded-2xl bg-[#c2e7ff] px-6 text-[15px] font-medium text-slate-900 shadow-sm hover:shadow">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-      Olustur
+<aside x-cloak x-show="auth.user" class="hidden w-[290px] shrink-0 lg:block">
+  <div class="sticky top-[92px] space-y-4">
+    <button type="button" @click="openCompose()" class="os-window-soft flex h-14 items-center gap-4 rounded-[22px] px-5 text-[15px] font-medium text-cyan-50 transition hover:bg-cyan-400/10">
+      <svg class="h-6 w-6 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+      Yeni Mail Klasoru
     </button>
 
-    <nav class="space-y-1 text-[15px]">
-      <button class="flex w-full items-center justify-between rounded-r-full bg-[#d3e3fd] px-4 py-2.5 font-medium text-slate-900">
-        <span class="flex items-center gap-4"><svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 5.75A1.75 1.75 0 0 1 4.75 4h10.5A1.75 1.75 0 0 1 17 5.75v8.5A1.75 1.75 0 0 1 15.25 16H4.75A1.75 1.75 0 0 1 3 14.25v-8.5Z"/></svg> Gelen Kutusu</span>
-        <span class="text-sm font-bold" x-text="totalUnread()"></span>
-      </button>
-      <button class="flex w-full items-center gap-4 rounded-r-full px-4 py-2.5 text-slate-700 hover:bg-slate-200/70"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m12 17.5 6.18 3.25-1.18-6.88L22 9l-6.9-1-3.1-6.25L8.9 8 2 9l4.99 4.87-1.17 6.88z"/></svg> Yildizli</button>
-      <button class="flex w-full items-center gap-4 rounded-r-full px-4 py-2.5 text-slate-700 hover:bg-slate-200/70"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 8v5l3 3"/><circle cx="12" cy="12" r="9"/></svg> Ertelenenler</button>
-      <button class="flex w-full items-center gap-4 rounded-r-full px-4 py-2.5 text-slate-700 hover:bg-slate-200/70"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19h16M12 5v10M7 10l5 5 5-5"/></svg> Gelen Kodlar</button>
-    </nav>
-
-    <div class="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <div class="os-window rounded-[24px] p-4">
       <div class="flex items-center justify-between">
-        <p class="text-sm font-medium text-slate-700">Inbox'lar</p>
-        <button @click="fetchInboxes()" class="text-xs font-medium text-sky-700">Yenile</button>
+        <div>
+          <p class="mono text-[11px] uppercase tracking-[0.22em] text-cyan-300">Workspace Tree</p>
+          <p class="mt-2 text-sm text-slate-400">Mail kutulari klasor olarak davranir, mailler dosya gibi acilir.</p>
+        </div>
+        <span class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-300" x-text="`${inboxes.length} klasor`"></span>
+      </div>
+
+      <nav class="mt-4 space-y-1 text-[14px] text-slate-300">
+        <button type="button" class="flex w-full items-center justify-between rounded-2xl bg-cyan-400/12 px-4 py-3 font-medium text-cyan-50">
+          <span class="flex items-center gap-3"><svg class="h-5 w-5 text-cyan-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg> Mail Explorer</span>
+          <span class="text-xs font-bold" x-text="totalUnread()"></span>
+        </button>
+        <div class="rounded-2xl px-4 py-3 text-slate-400">
+          <div class="flex items-center gap-3"><svg class="h-4.5 w-4.5 text-amber-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="m12 17.5 6.18 3.25-1.18-6.88L22 9l-6.9-1-3.1-6.25L8.9 8 2 9l4.99 4.87-1.17 6.88z"/></svg> Pinned Files</div>
+        </div>
+        <div class="rounded-2xl px-4 py-3 text-slate-400">
+          <div class="flex items-center gap-3"><svg class="h-4.5 w-4.5 text-violet-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 8v5l3 3"/><circle cx="12" cy="12" r="9"/></svg> Queue</div>
+        </div>
+        <div class="rounded-2xl px-4 py-3 text-slate-400">
+          <div class="flex items-center gap-3"><svg class="h-4.5 w-4.5 text-emerald-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19h16M12 5v10M7 10l5 5 5-5"/></svg> Codes Vault</div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="os-window rounded-[24px] p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-white">Mailbox Folders</p>
+          <p class="mt-1 text-xs text-slate-400">Temp ve kisisel kutular burada dosya agaci gibi gorunur.</p>
+        </div>
+        <button type="button" @click="fetchInboxes()" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-cyan-200">Yenile</button>
       </div>
       <div class="mail-scroll mt-3 max-h-[calc(100vh-420px)] space-y-1 overflow-auto pr-1">
         <template x-for="inbox in inboxes" :key="inbox.address">
-          <button @click="selectInbox(inbox.address)" :class="activeInbox && activeInbox.address === inbox.address ? 'bg-[#e8f0fe] text-slate-900' : 'hover:bg-slate-100 text-slate-700'" class="w-full rounded-xl px-3 py-2 text-left text-sm">
+          <button type="button" @click="selectInbox(inbox.address)" :class="activeInbox && activeInbox.address === inbox.address ? 'bg-cyan-400/12 text-white border-cyan-400/25' : 'text-slate-300 hover:bg-white/5 border-transparent'" class="w-full rounded-[18px] border px-3 py-3 text-left text-sm transition">
             <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate font-medium" x-text="inbox.profile_name || inbox.address"></p>
-                <p class="truncate text-xs text-slate-500" x-text="inbox.address"></p>
-                <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400" x-text="inboxBadge(inbox)"></p>
+              <div class="flex min-w-0 items-start gap-3">
+                <div class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-300/12 text-amber-200">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="truncate font-medium" x-text="inbox.profile_name || inbox.address"></p>
+                  <p class="truncate text-xs text-slate-500" x-text="inbox.address"></p>
+                  <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400" x-text="inboxBadge(inbox)"></p>
+                </div>
               </div>
-              <span class="shrink-0 text-xs font-medium" x-text="inbox.unread_count || inbox.message_count"></span>
+              <span class="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300" x-text="inbox.unread_count || inbox.message_count"></span>
             </div>
           </button>
         </template>
