@@ -223,7 +223,7 @@ function createMailDesk() {
       this.accountTab = 'overview'
       this.apiKeyError = ''
       this.googleError = ''
-      Promise.allSettled([this.loadApiKeys(), this.loadGoogleWorkspace({ includeAliases: true, includeMessages: true })])
+      Promise.allSettled([this.loadApiKeys(), this.loadGoogleWorkspace({ includeAliases: true, includeMessages: true, forceMessages: true })])
     },
 
     closeAccount() {
@@ -256,7 +256,6 @@ function createMailDesk() {
 
     async loadGoogleMessages({ force = false } = {}) {
       if (!this.auth.user || !this.googleEnabled) return
-      if (!force && this.googleMessages.length && Date.now() - this.googleMessagesFetchedAt < 20000) return this.googleMessages
       if (this.googleMessagesRequest) return this.googleMessagesRequest
       this.googleMessagesRequest = (async () => {
         try {

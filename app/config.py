@@ -38,7 +38,7 @@ class Settings:
     google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     google_oauth_redirect_uri: str = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8080/api/integrations/google/callback")
-    google_temp_alias_pool_size: int = int(os.getenv("GOOGLE_TEMP_ALIAS_POOL_SIZE", "500"))
+    google_temp_alias_pool_size: int = int(os.getenv("GOOGLE_TEMP_ALIAS_POOL_SIZE", "50"))
 
     @property
     def accepted_domains(self) -> list[str]:

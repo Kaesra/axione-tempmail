@@ -233,7 +233,7 @@ async def google_aliases(user: dict = Depends(require_user)) -> list[GoogleAlias
 
 @app.get("/api/integrations/google/messages", response_model=list[GoogleMessageResponse])
 async def google_messages(user: dict = Depends(require_user)) -> list[GoogleMessageResponse]:
-    return [GoogleMessageResponse(**item) for item in list_google_recent_messages(user["username"])]
+    return [GoogleMessageResponse(**item) for item in list_google_recent_messages(user["username"], limit=10)]
 
 
 @app.post("/api/integrations/google/temp-alias", response_model=GoogleAliasResponse)
